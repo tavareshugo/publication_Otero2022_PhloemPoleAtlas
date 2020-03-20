@@ -1,0 +1,5 @@
+name: getReference
+channels:
+  - bioconda
+dependencies:
+  - gffread=0.11

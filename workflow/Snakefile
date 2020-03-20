@@ -1,0 +1,172 @@
+configfile: "workflow/config.yaml"
+
+#### Sample sheet ####
+import pandas as pd
+
+sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"], drop = False)
+
+
+#### Rules ####
+
+rule all:
+  input:
+    "data/processed/SingleCellExperiment/all_batches.rds",
+    "data/processed/SingleCellExperiment/all_batches_mnn.rds",
+    "data/processed/SingleCellExperiment/ring_batches.rds",
+    "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+    # expand("data/processed/SingleCellExperiment/{sample}", sample = sample_info["sample"])
+    # "data/external/denyer2019/rep1", 
+    # "data/external/denyer2019/rep2",
+    # "data/external/reference/cellranger_index"
+    
+
+### fetch reference annotation
+
+rule getReference:
+  input:
+    gfp_fasta="data/raw/GFP/GFP.fa",
+    gfp_gff3="data/raw/GFP/GFP.gff3"
+  output:
+    idx=directory("data/external/reference/cellranger_index"),
+    gtf="data/external/reference/annotation.gtf"
+  params:
+    runtime = "02:00:00"
+  log:
+    "logs/getReference/getReference.log"
+  conda:
+    "envs/getReference.yaml"
+  threads: 1
+  shell:
+    "bash workflow/scripts/getReference.sh 45 {threads} data/external/reference/"
+
+
+### fetch public data
+
+rule getPublicData:
+  output:
+    directory("data/external/denyer2019/rep1/sample_ara_col_2367_MissingLibrary_1_HFHN2BGX7"), 
+    directory("data/external/denyer2019/rep1/sample_ara_col_2367_MissingLibrary_1_HNV5MAFXX"),
+    directory("data/external/denyer2019/rep2/sample_ara_MIR166_2360_MissingLibrary_1_HFHN2BGX7"),
+    directory("data/external/denyer2019/rep2/sample_ara_MIR166_2360_MissingLibrary_1_HNV5MAFXX")
+  log:
+    "logs/getPublicData/getPublicData.log"
+  threads: 4
+  params:
+    runtime = "03:00:00"
+  shell:
+    "bash workflow/scripts/getPublicData.sh"
+
+
+### cellranger
+
+rule cellranger:
+  input:
+    fq = lambda wildcards: sample_info.loc[wildcards.sample, "fastqs"],
+    idx="data/external/reference/cellranger_index"
+  output:
+    directory("data/intermediate/counts_cellranger/{sample}")
+  params:
+    cells = lambda wildcards: sample_info.loc[wildcards.sample, "cells"],
+    runtime = "12:00:00"
+  log:
+    "logs/cellranger/{sample}.log"
+  threads: 12
+  shell:
+    "(cellranger count "
+    "--id={wildcards.sample} "
+    "--transcriptome={input.idx} "
+    "--fastqs={input.fq} "
+    "--expect-cells={params.cells} "
+    "--localcores={threads} "
+    "--localmem=50 "
+    "; mv {wildcards.sample} {output}) "
+    "> {log} 2>&1"
+
+
+### SingleCellExperiment
+
+# process each sample individually
+rule SingleCellExperiment:
+  input:
+    # get_cellranger
+    # expand("data/intermediate/counts_cellranger/{id}", id = sample_info["sample"])
+    "data/intermediate/counts_cellranger/{sample}"
+    # expand("data/intermediate/counts_cellranger/{{sample}}")
+  output:
+    # "data/processed/sce.rds"
+    # directory("data/processed/SingleCellExperiment/{sample}")
+    rds = "data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds",
+    qc = "data/processed/SingleCellExperiment/{sample}/{sample}_qc.pdf"
+  params:
+    runtime = "05:00:00"
+  log:
+    "logs/SingleCellExperiment/{sample}.log"
+  conda:
+    "envs/SingleCellExperiment.yaml"
+  threads: 12
+  shell:
+    "Rscript --vanilla workflow/scripts/makeSingleCellExperiment.R "
+    "--cellranger {input} "
+    "--sample {wildcards.sample} "
+    "--outdir $(dirname {output.rds}) "
+    "--fdr 0.001 "
+    "--cores {threads} "
+    "> {log} 2>&1"
+
+
+# combine and batch-normalise all the samples
+rule combineSingleCellExperiment:
+  input:
+    expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = sample_info["sample"])
+  output:
+    "data/processed/SingleCellExperiment/all_batches.rds",
+    "data/processed/SingleCellExperiment/all_batches_mnn.rds",
+    "data/processed/SingleCellExperiment/ring_batches.rds",
+    "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+  params:
+    runtime = "01:00:00"
+  log:
+    "logs/SingleCellExperiment/combineSingleCellExperiment.log"
+  conda:
+    "envs/SingleCellExperiment.yaml"
+  threads: 1
+  shell:
+    "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R > {log} 2>&1"
+
+
+
+
+# ### alevin
+# from glob import glob
+
+# rule alevin:
+#   input:
+#     r1 = lambda wildcards: glob(sample_info.loc[wildcards.sample, "fq1"]),
+#     r2 = lambda wildcards: glob(sample_info.loc[wildcards.sample, "fq2"])
+#   output:
+#     directory("data/intermediate/counts/{sample}_alevin")
+#   threads: 12
+#   params:
+#     cells = lambda wildcards: sample_info.loc[wildcards.sample, "cells"],
+#     idx = config["salmon_index"],
+#     transcript2gene = config["transcript2gene"]
+#   shell:
+#     "salmon alevin \
+#       -l ISR \
+#       -1 {input.r1} \
+#       -2 {input.r2} \
+#       --chromiumV3 \
+#       --dumpFeatures \
+#       -i {params.idx} \
+#       --expectCells {params.cells} \
+#       -p {threads} \
+#       -o {output} \
+#       --tgMap {params.transcript2gene}"
+
+# rule alevin_qc:
+#   input:
+#     "data/intermediate/counts/{sample}_alevin"
+#   output:
+#     "data/intermediate/counts/{sample}_alevin/{sample}_qc.html"
+#   shell:
+#     "touch {output}"

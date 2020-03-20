@@ -1,0 +1,19 @@
+name: SingleCellExperiment
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - r-optparse=1.6
+  - r-data.table=1.12
+  - r-rtsne=0.15
+  - r-uwot=0.1
+  - r-ggplot2=3.1
+  - r-ggpointdensity=0.1
+  - bioconductor-destiny=2.15
+  - bioconductor-biomart=2.42
+  - bioconductor-dropletutils=1.6
+  - bioconductor-scater=1.14
+  - bioconductor-scran=1.14
+  - bioconductor-biocparallel=1.20
+  - bioconductor-edger=3.28
+  - bioconductor-batchelor=1.2
