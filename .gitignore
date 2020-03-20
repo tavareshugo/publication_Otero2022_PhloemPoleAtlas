@@ -1,0 +1,8 @@
+*
+!.gitignore
+!workflow
+!workflow/*
+!workflow/envs/*
+!workflow/scripts/*
+!README.md
+!*.Rproj
