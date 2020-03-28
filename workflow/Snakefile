@@ -11,9 +11,7 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 rule all:
   input:
     "data/processed/SingleCellExperiment/all_batches.rds",
-    "data/processed/SingleCellExperiment/all_batches_mnn.rds",
-    "data/processed/SingleCellExperiment/ring_batches.rds",
-    "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+    "data/processed/SingleCellExperiment/ring_batches.rds"
     # expand("data/processed/SingleCellExperiment/{sample}", sample = sample_info["sample"])
     # "data/external/denyer2019/rep1", 
     # "data/external/denyer2019/rep2",
@@ -120,16 +118,16 @@ rule combineSingleCellExperiment:
     expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = sample_info["sample"])
   output:
     "data/processed/SingleCellExperiment/all_batches.rds",
-    "data/processed/SingleCellExperiment/all_batches_mnn.rds",
-    "data/processed/SingleCellExperiment/ring_batches.rds",
-    "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+    "data/processed/SingleCellExperiment/ring_batches.rds"
+   # "data/processed/SingleCellExperiment/all_batches_mnn.rds",
+   # "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
   params:
-    runtime = "01:00:00"
+    runtime = "07:00:00"
   log:
     "logs/SingleCellExperiment/combineSingleCellExperiment.log"
   conda:
     "envs/SingleCellExperiment.yaml"
-  threads: 1
+  threads: 15
   shell:
     "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R > {log} 2>&1"
 

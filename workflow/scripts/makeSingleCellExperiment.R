@@ -1,4 +1,4 @@
-# Package setup -----------------------------------------------------------
+# Setup -----------------------------------------------------------------
 
 suppressPackageStartupMessages({
   library(optparse)
@@ -53,8 +53,8 @@ option_list = list(
   )
 opt <- parse_args(OptionParser(option_list=option_list))
 
-# opt$cellranger <- "data/intermediate/counts_cellranger/denyer1-2/"
-# opt$outdir <- "data/processed/SingleCellExperiment/denyer1-2/"
+# opt$cellranger <- "data/intermediate/counts_cellranger/sAPL/"
+# opt$outdir <- "data/processed/SingleCellExperiment/sAPL/"
 # opt$fdr <- 0.001
 # opt$sample <- basename(dirname(dirname(opt$cellranger)))
 # opt$cores <- 3
@@ -95,10 +95,7 @@ print(opt)
 # Read droplet data -------------------------------------------------------
 
 # Read 10x data
-sce <- read10xCounts(opt$cellranger, col.names = TRUE)
-
-# simplify sample name
-sce$Sample <- opt$sample
+sce <- read10xCounts(opt$cellranger, sample.names = opt$sample, col.names = TRUE)
 
 # remove droplets with no data at all
 sce <- sce[, which(colSums(counts(sce)) > 0)]
@@ -127,11 +124,13 @@ gene_meta <- getBM(attributes=c("ensembl_gene_id",
 setDT(gene_meta)
 
 # Collapse alternative names for each ID
-gene_meta <- gene_meta[ ,.(alternative_name = paste(c(tair_symbol, external_gene_name),
-                                       collapse = "/")) ,
+gene_meta <- gene_meta[ , .(alternative_name = paste(c(tair_symbol, external_gene_name),
+                                                     collapse = "/")) ,
            by = .(ensembl_gene_id, chromosome_name, start_position, end_position)]
-gene_meta[, alternative_name := ifelse(alternative_name == "/",
-                                       NA, alternative_name)]
+gene_meta[, alternative_name := ifelse(alternative_name == "/", NA, alternative_name)]
+gene_meta$alternative_name <- gsub("^/", "", gene_meta$alternative_name)
+gene_meta$alternative_name <- gsub("/$", "", gene_meta$alternative_name)
+
 setnames(gene_meta,
          old = c("ensembl_gene_id", "chromosome_name"),
          new = c("ID", "chrom"))
@@ -154,7 +153,12 @@ rowData(sce)$go_cell_cycle <- rowData(sce)$ID %in% cell_cycle
 rowData(sce)$go_mitosis <- rowData(sce)$ID %in% mitosis
 rowData(sce)$go_phloem_dev <- rowData(sce)$ID %in% phloem_dev
 
-rowData(sce) <- merge(gene_meta, rowData(sce), by = "ID", all.y = TRUE)
+# add other gene meta information
+gene_meta <- merge(gene_meta, rowData(sce), by = "ID", all.y = TRUE)
+rownames(gene_meta) <- gene_meta$ID
+rowData(sce) <- gene_meta[rownames(sce), ] # ensure correct order
+
+if(!all(rownames(sce) == rowData(sce)$ID)) stop("rowData is corrupted.")
 
 # add chromosome for fluorescent proteins
 rowData(sce)$chrom[which(is.na(rowData(sce)$chrom))] <- "FP"

@@ -2,6 +2,7 @@ name: SingleCellExperiment
 channels:
   - bioconda
   - conda-forge
+  # - aksarkar 
 dependencies:
   - r-optparse=1.6
   - r-data.table=1.12
@@ -9,6 +10,7 @@ dependencies:
   - r-uwot=0.1
   - r-ggplot2=3.1
   - r-ggpointdensity=0.1
+  - r-codetools=0.2_16
   - bioconductor-destiny=2.15
   - bioconductor-biomart=2.42
   - bioconductor-dropletutils=1.6
@@ -17,3 +19,5 @@ dependencies:
   - bioconductor-biocparallel=1.20
   - bioconductor-edger=3.28
   - bioconductor-batchelor=1.2
+  - bioconductor-zinbwave=1.8
+  # - r-glmpca=0.1.0.dev1
