@@ -10,8 +10,10 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 
 rule all:
   input:
-    "data/processed/SingleCellExperiment/all_batches.rds",
-    "data/processed/SingleCellExperiment/ring_batches.rds"
+    expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"])
+    # "data/processed/SingleCellExperiment/all_batches.rds",
+    # "data/processed/SingleCellExperiment/ring_batches.rds"
+    
     # expand("data/processed/SingleCellExperiment/{sample}", sample = sample_info["sample"])
     # "data/external/denyer2019/rep1", 
     # "data/external/denyer2019/rep2",
@@ -112,24 +114,32 @@ rule SingleCellExperiment:
     "> {log} 2>&1"
 
 
+# function to fetch relevant single cell experiment files
+def getSCE(wildcards):
+  return(expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo]))
+
 # combine and batch-normalise all the samples
 rule combineSingleCellExperiment:
   input:
-    expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = sample_info["sample"])
+    # getSCE
+    lambda wildcards: expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo])
   output:
-    "data/processed/SingleCellExperiment/all_batches.rds",
-    "data/processed/SingleCellExperiment/ring_batches.rds"
-   # "data/processed/SingleCellExperiment/all_batches_mnn.rds",
-   # "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+    "data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds"
+    # "data/processed/SingleCellExperiment/{files}_batches_{filt}.rds"
+    # "data/processed/SingleCellExperiment/all_batches.rds",
+    # "data/processed/SingleCellExperiment/ring_batches.rds"
+    # "data/processed/SingleCellExperiment/all_batches_mnn.rds",
+    # "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
   params:
+    filters = lambda wildcards: config["filters"][wildcards.filt],
     runtime = "07:00:00"
   log:
-    "logs/SingleCellExperiment/combineSingleCellExperiment.log"
+    "logs/SingleCellExperiment/combineSingleCellExperiment_{combo}_{filt}.log"
   conda:
     "envs/SingleCellExperiment.yaml"
-  threads: 15
+  threads: 32
   shell:
-    "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R > {log} 2>&1"
+    "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R {params.filters} --cores {threads} --out {output} {input} > {log} 2>&1"
 
 
 

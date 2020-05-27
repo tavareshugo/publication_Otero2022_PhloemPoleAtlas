@@ -4,3 +4,38 @@ sample_sheet:
   "sample_info.csv"
 
 
+#### samples to combine ####
+
+combine:
+  all:
+    - denyer1-1
+    - denyer1-2
+    - denyer2-1
+    - denyer2-2
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
+  ring:
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
+  denyer:
+    - denyer1-1
+    - denyer1-2
+    - denyer2-1
+    - denyer2-2
+
+
+#### filters to apply ####
+
+filters:
+  softfilt:
+    "--min_total_umi_per_cell 1 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+  hardfilt:
+    "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
