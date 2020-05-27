@@ -199,7 +199,7 @@ message("Getting barcode ranks.")
 bcrank <- barcodeRanks(counts(sce))
 
 # add information about being empty cell or not (for plotting later on)
-bcrank$is_cell <- empty$PValue <= opt$fdr
+bcrank$is_cell <- empty$FDR <= opt$fdr
 
 # add information to colData
 colData(sce)$bc_rank <-  bcrank$rank
