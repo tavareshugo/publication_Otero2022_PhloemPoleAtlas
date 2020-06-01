@@ -6,3 +6,4 @@
 !workflow/scripts/*
 !README.md
 !*.Rproj
+.Rhistory
