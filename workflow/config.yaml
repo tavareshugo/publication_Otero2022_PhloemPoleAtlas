@@ -35,7 +35,14 @@ combine:
 #### filters to apply ####
 
 filters:
+  nofilt:
+    "--min_total_umi_per_cell 1 --min_genes_per_cell 1 --min_cells_gene_detected_in 1 --min_gene_counts 1 --max_mito_pct 100 --n_hvgs 1000"
   softfilt:
-    "--min_total_umi_per_cell 1 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+    # "--min_total_umi_per_cell 1 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+    "--min_total_umi_per_cell 1 --min_genes_per_cell 1 --min_cells_gene_detected_in 3 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
+  mediumfilt:
+    # "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+    "--min_total_umi_per_cell 1 --min_genes_per_cell 300 --min_cells_gene_detected_in 3 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
   hardfilt:
-    "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+    # "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+    "--min_total_umi_per_cell 1 --min_genes_per_cell 500 --min_cells_gene_detected_in 5 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"

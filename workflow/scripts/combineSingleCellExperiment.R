@@ -6,11 +6,12 @@ suppressPackageStartupMessages({
   library(scater)
   library(scran)
   library(batchelor)
+  library(sctransform)
   # library(zinbwave)
   # library(glmpca)
 })
 
-set.seed(1001)
+set.seed(1590572757)
 
 
 # Capture user input ------------------------------------------------------
@@ -38,7 +39,7 @@ option_list = list(
               help = "Minimum number of counts to consider a gene as expressed for the --min_gene_detected filter."),
   make_option(c("--max_mito_pct"),
               action = "store",
-              default = 10,
+              default = 100,
               type = "integer",
               help = "Maximum percentage of counts assigned to mitochondrial genes allowed to retain a cell."),
   make_option(c("--n_hvgs"),
@@ -63,11 +64,14 @@ options <- opt$options
 files <- opt$args
 
 # # for testing
-# options$min_total_umi_per_cell <- 1000
-# options$min_cells_gene_detected_in <- 5
-# options$min_gene_counts <- 5
+# opt <- parse_args(OptionParser(option_list=option_list))
+# options <- opt
+# options$min_total_umi_per_cell <- 1
+# options$min_genes_per_cell <- 300
+# options$min_cells_gene_detected_in <- 3
+# options$min_gene_counts <- 1
 # options$max_mito_pct <- 10
-# options$n_hvgs <- 2000
+# options$n_hvgs <- 1000
 # options$out <- "data/processed/SingleCellExperiment/test.rds"
 # options$cores <- 2
 # files <- list.files(".", "_sce.rds", recursive = TRUE, full.names = TRUE)
@@ -104,7 +108,7 @@ sce_all <- lapply(
 
     message("  - With ", nrow(i), " genes and ", ncol(i), " cells.")
     return(i)
-    })
+  })
 
 # combine samples to single object
 sce_all <- do.call("cbind", sce_all)
@@ -130,10 +134,10 @@ sce_all <- sce_all[, which(sce_all$subsets_mitochondria_percent <= options$max_m
 # sce_all <- sce_all[, which((sce_all$total) >= (quantile((sce_all$total), 0.99) * 0.05))]
 
 # filter on total UMIs
-sce_all <- sce_all[, which(sce_all$total >= options$min_total_umi_per_cell)]
+sce_all <- sce_all[, which(colSums(counts(sce_all)) >= options$min_total_umi_per_cell)]
 
 # filter on detected genes
-sce_all[, which(colSums(counts(sce_all) >= options$min_gene_counts) >= options$min_genes_per_cell)]
+sce_all <- sce_all[, which(colSums(counts(sce_all) >= options$min_gene_counts) >= options$min_genes_per_cell)]
 
 # rescale logcounts within each batch (to account for different library sizes)
 sce_all <- multiBatchNorm(sce_all, batch = sce_all$Sample)
@@ -153,22 +157,55 @@ message("After filtering: ", nrow(sce_all), " genes and ", ncol(sce_all), " cell
 # Highly variable genes ---------------------------------------------------
 
 # get the estimated variance for each gene and top "highly variable genes"
-metadata(sce_all)[["genevar"]] <- modelGeneVar(sce_all, block = colData(sce_all)$Sample,
+metadata(sce_all)[["genevar"]] <- modelGeneVar(sce_all,
+                                               block = colData(sce_all)$Sample,
                                                subset.row = metadata(sce_all)$nucgenes)
 metadata(sce_all)[["hvgs"]] <- getTopHVGs(metadata(sce_all)$genevar,
                                           n = options$n_hvgs)
 
 
+# sctransform normalisation -----------------------------------------------
+
+# variance-stabilising transform
+# (setting min_cells = 1 as the filtering is done earlier)
+vst_norm <- vst(umi = counts(sce_all),
+                cell_attr = colData(sce_all),
+                batch_var = "Sample",
+                min_cells = 1,
+                return_cell_attr = TRUE,
+                return_corrected_umi = TRUE)
+
+# add the model matrices to assay slot
+assay(sce_all, "vst") <- vst_norm$umi_corrected
+assay(sce_all, "logvst") <- log1p(assay(sce_all, "vst"))
+
+# get the most variable (nuclear) genes according to this model
+temp <- vst_norm$gene_attr[metadata(sce_all)$nucgenes, ]
+metadata(sce_all)[["hvgs_vst"]] <- rownames(temp)[order(-temp$residual_variance)][1:options$n_hvgs]
+
+rm(temp, vst_norm) # free-up memory
+
+
 # MNN correction ----------------------------------------------------------
 message("Applying MNN batch correction...")
 
-# create object with MNN correction
-sce_all_mnn <- fastMNN(sce_all, batch = colData(sce_all)$Sample,
+# create object with MNN correction - on simple logcounts
+sce_all_mnn <- fastMNN(sce_all,
+                       batch = colData(sce_all)$Sample,
                        subset.row = metadata(sce_all)$nucgenes,
+                       assay.type = "logcounts",
                        BPPARAM = options$cores)
-reducedDim(sce_all, "MNN_corrected") <- reducedDim(sce_all_mnn, "corrected")
+reducedDim(sce_all, "MNN_logcounts") <- reducedDim(sce_all_mnn, "corrected")
 
-rm(sce_all_mnn)
+# create object with MNN correction - on VST logcounts
+sce_all_mnn <- fastMNN(sce_all,
+                       batch = colData(sce_all)$Sample,
+                       subset.row = metadata(sce_all)$nucgenes,
+                       assay.type = "logvst",
+                       BPPARAM = options$cores)
+reducedDim(sce_all, "MNN_logvst") <- reducedDim(sce_all_mnn, "corrected")
+
+rm(sce_all_mnn) # free-up memory
 
 
 # # ZINB-WAVE correction ----------------------------------------------------
@@ -198,88 +235,137 @@ rm(sce_all_mnn)
 #                                     X = cbind(Sample = sce_ring$Sample),
 #                                     fam = "nb")
 
-# sctransform normalisation -----------------------------------------------
-
-vst_norm <- vst(umi = counts(sce_all),
-                cell_attr = colData(sce_all),
-                batch_var = "Sample",
-                return_corrected_umi = TRUE)
-
-assay(sce_all, "SCT") <- vst_norm$umi_corrected
-assay(sce_all, "SCTlog1p") <- log1p(assay(sce_all, "SCT"))
-
 
 # Dimensionality reduction ----------------------------------------------
+message("Running PCA...")
 
-# PCA
-reducedDim(sce_all, "PCA") <- calculatePCA(sce_all,
+# PCA - on simple logcounts
+reducedDim(sce_all, "PCA_logcounts") <- calculatePCA(sce_all,
+                                           exprs_values = "logcounts",
                                            subset_row = metadata(sce_all)$hvgs)
+
+# identify elbow and PC which explains at least 70% variance
+# pc_variance <- attr(reducedDim(sce_all, "PCA_logcounts"), "percentVar")
+# attr(reducedDim(sce_all, "PCA_logcounts"), "elbow") <- PCAtools::findElbowPoint(pc_variance)
+# attr(reducedDim(sce_all, "PCA_logcounts"), "pc70") <-  min(which(cumsum(pc_variance) >= 70))
+
+# PCA - on VST logcounts
+reducedDim(sce_all, "PCA_logvst") <- calculatePCA(sce_all,
+                                                  exprs_values = "logvst",
+                                                  subset_row = metadata(sce_all)$hvgs_vst)
+# pc_variance <- attr(reducedDim(sce_all, "PCA_logvst"), "percentVar")
+# attr(reducedDim(sce_all, "PCA_logvst"), "elbow") <- PCAtools::findElbowPoint(pc_variance)
+# attr(reducedDim(sce_all, "PCA_logvst"), "pc70") <-  min(which(cumsum(pc_variance) >= 70))
 
 # UMAP with different n_neighbors (uwot::umap default is 15)
 # number of neighbours refers to how many neighbours are used for the computation
 # higher values for a more global picture and smaller for more local picture
+set.seed(1590572757)
 for(i in c(7, 15, 30, 100)){
   message("UMAP with n_neighbors = ", i)
 
-  reducedDim(sce_all, paste0("UMAP_", i)) <- calculateUMAP(sce_all,
-                                                           dimred = "PCA",
-                                                           n_dimred = 10,
-                                                           n_neighbors = i)
-  reducedDim(sce_all, paste0("UMAPall_", i)) <- calculateUMAP(sce_all,
-                                                              dimred = "PCA",
-                                                              n_neighbors = i)
-  reducedDim(sce_all, paste0("UMAP-MNN_", i)) <- calculateUMAP(sce_all,
-                                                               dimred = "MNN_corrected",
-                                                                n_neighbors = i)
-  # reducedDim(sce_all, paste0("UMAP-SCT_", i)) <- calculateUMAP(sce_all,
-  #                                                              dimred = "SCTlog1p",
-  #                                                              n_neighbors = i)
+  # using 10 PCs as we do not expect more than 10 cell types
+  # in fact probably less than that, so this should include majority of biological signal
+  reducedDim(sce_all, paste0("UMAP", i, "_logcounts")) <-
+    calculateUMAP(sce_all,
+                  dimred = "PCA_logcounts",
+                  n_dimred = 10,
+                  n_neighbors = i)
+
+  reducedDim(sce_all, paste0("UMAP", i, "_logvst")) <-
+    calculateUMAP(sce_all,
+                  dimred = "PCA_logvst",
+                  n_dimred = 10,
+                  n_neighbors = i)
+
+  # MNN-corrected data on logcounts
+  reducedDim(sce_all, paste0("UMAP", i, "_MNN_logcounts")) <-
+    calculateUMAP(sce_all,
+                  dimred = "MNN_logcounts",
+                  n_neighbors = i)
+
+  # MNN-corrected data on logvst
+  reducedDim(sce_all, paste0("UMAP", i, "_MNN_logvst")) <-
+    calculateUMAP(sce_all,
+                  dimred = "MNN_logvst",
+                  n_neighbors = i)
 }
 
 # t-SNE with different perplexity (Rtsne::Rtsne default is 30)
 # perplexity refers to variance of gaussian distribution that weights distances in high-dim space
+set.seed(1590572757)
 for(i in c(15, 30, 60)){
   message("t-SNE with perplexity = ", i)
 
-  reducedDim(sce_all, paste0("TSNE_", i)) <- calculateTSNE(sce_all, dimred = "PCA",
-                                                            n_dimred = 10,
-                                                            n_neighbors = i)
-  reducedDim(sce_all, paste0("TSNEall_", i)) <- calculateTSNE(sce_all,
-                                                              dimred = "PCA",
-                                                               n_neighbors = i)
-  reducedDim(sce_all, paste0("TSNE-MNN_", i)) <- calculateTSNE(sce_all,
-                                                               dimred = "MNN_corrected",
-                                                                n_neighbors = i)
-  # reducedDim(sce_all, paste0("TSNE-ZINB_", i)) <- calculateTSNE(sce_all,
-  #                                                              dimred = "zinbwave",
-  #                                                              n_neighbors = i)
+  # using PCs explaining at least 70% of variance
+  reducedDim(sce_all, paste0("TSNE", i, "_logcounts")) <-
+    calculateTSNE(sce_all,
+                  dimred = "PCA_logcounts",
+                  n_dimred = 10,
+                  n_neighbors = i)
+
+  reducedDim(sce_all, paste0("TSNE", i, "_logvst")) <-
+    calculateTSNE(sce_all,
+                  dimred = "PCA_logvst",
+                  n_dimred = 10,
+                  n_neighbors = i)
+
+  # MNN-corrected data on logcounts
+  reducedDim(sce_all, paste0("TSNE", i, "_MNN_logcounts")) <-
+    calculateTSNE(sce_all,
+                  dimred = "MNN_logcounts",
+                  n_neighbors = i)
+
+  # MNN-corrected data on logvst
+  reducedDim(sce_all, paste0("TSNE", i, "_MNN_logvst")) <-
+    calculateTSNE(sce_all,
+                  dimred = "MNN_logvst",
+                  n_neighbors = i)
 }
 
 # DiffusionMap
+set.seed(1590572757)
 message("Diffusion maps...")
-reducedDim(sce_all, "DIFFMAP") <- calculateDiffusionMap(sce_all, dimred = "PCA",
-                                                        ncomponents = 10,
-                                                        n_dimred = 10)
+reducedDim(sce_all, "DIFFMAP_logcounts") <-
+  calculateDiffusionMap(sce_all,
+                        dimred = "PCA_logcounts",
+                        ncomponents = 10,
+                        n_dimred = 10)
 
-reducedDim(sce_all, "DIFFMAPall") <- calculateDiffusionMap(sce_all,
-                                                           ncomponents = 10,
-                                                           dimred = "PCA")
+reducedDim(sce_all, "DIFFMAP_logvst") <-
+  calculateDiffusionMap(sce_all,
+                        dimred = "PCA_logvst",
+                        ncomponents = 10,
+                        n_dimred = 10)
 
-reducedDim(sce_all, "DIFFMAP-MNN") <- calculateDiffusionMap(sce_all,
-                                                            ncomponents = 10,
-                                                            dimred = "MNN_corrected")
+reducedDim(sce_all, "DIFFMAP_MNN_logcounts") <-
+  calculateDiffusionMap(sce_all,
+                        ncomponents = 10,
+                        dimred = "MNN_logcounts")
+
+reducedDim(sce_all, "DIFFMAP_MNN_logvst") <-
+  calculateDiffusionMap(sce_all,
+                        ncomponents = 10,
+                        dimred = "MNN_logvst")
 
 
 # Clustering --------------------------------------------------------------
+set.seed(1590572757)
 
-# Graph-based clustering (similar to Seurat method)
-graph_mnn <- buildSNNGraph(sce_all, k = 100, use.dimred = "MNN_corrected",
-                                             type = "jaccard")
-sce_all$cluster_mnn <- factor(igraph::cluster_louvain(graph_mnn)$membership)
+# Graph-based clustering (essentially similar to Seurat's implementation)
+for(i in c("PCA", "MNN")){
+  for(ii in c("logcounts", "logvst")){
+    message("clustering with ", paste(i, ii, sep = "_"))
 
-graph_pca <- buildSNNGraph(sce_all, k = 100, use.dimred = "PCA",
-                                             type = "jaccard")
-sce_all$cluster_pca <- factor(igraph::cluster_louvain(graph_pca)$membership)
+    # compute graph
+    graph <- buildSNNGraph(sce_all, k = 100, type = "jaccard",
+                           use.dimred = paste(i, ii, sep = "_"))
+
+    # add cluster membership to colData
+    sce_all[[tolower(paste("cluster", i, ii, sep = "_"))]] <-
+      factor(igraph::cluster_louvain(graph)$membership)
+  }
+}
 
 
 # Save objects ------------------------------------------------------------
