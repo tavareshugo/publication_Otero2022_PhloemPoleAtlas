@@ -30,6 +30,11 @@ combine:
     - denyer1-2
     - denyer2-1
     - denyer2-2
+  early:
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+
 
 
 #### filters to apply ####
