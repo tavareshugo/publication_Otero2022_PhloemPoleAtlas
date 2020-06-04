@@ -1,7 +1,9 @@
-#' ggplot S3 method for BioConductor::DataFrame
+#' fortify S3 method for BioConductor::DataFrame
+#'
+#' This allows using DFrame with ggplot2
+#'
 #' @param data a DataFrame object to plot.
-#' @param ...  arguments passed on to the ggplot2::ggplot function.
-ggplot.DFrame <- function(data, ...) ggplot2::ggplot(as.data.frame(data), ...)
+fortify.DFrame <- function(data) as.data.frame(data)
 
 #' helper function to fetch reducedDim data
 #' @param x a SingleCellExperiment object.
