@@ -1,7 +1,8 @@
-library(data.table)
-library(scater)
+# library(data.table)
+# library(scater)
+library(SingleCellExperiment)
 library(slingshot)
-library(ggplot2)
+library(tidyverse)
 library(patchwork)
 
 # set seed for reproducible results
@@ -16,37 +17,48 @@ source("analysis/functions/utils.R")
 
 # Read data ---------------------------------------------------------------
 
-ring_soft <- readRDS("data/processed/SingleCellExperiment/ring_batches_softfilt.rds")
+ring_hard <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
 
 
 # Trajectory fitting with slingshot -------------------------------------
 
 # using only first 10 dimensions of MNN (colinearity at higher dimensions?)
 # I checked running slingshot with 10 or 40 MNN axis and it's the same essentially
-reducedDim(ring_soft, "temp") <- reducedDim(ring_soft, "MNN_corrected")[, 1:10]
-ring_soft <- slingshot(ring_soft,
-                       clusterLabels = ring_soft$cluster_mnn,
+reducedDim(ring_hard, "temp") <- reducedDim(ring_hard, "MNN_logvst")[, 1:10]
+sling1 <- slingshot(ring_hard,
+                       clusterLabels = ring_hard$cluster_mnn_logvst,
                        reducedDim = "temp")
-# ring_soft <- slingshot(ring_soft,
-#                        clusterLabels = ring_soft$cluster_mnn,
-#                        reducedDim = "DIFFMAP-MNN")
 
-temp <- melt(getReducedDim(ring_soft, "UMAP-MNN_30"),
+ring_hard <- slingshot(ring_hard,
+                       clusterLabels = ring_hard$cluster_mnn_logvst,
+                       reducedDim = "DIFFMAP_MNN_logvst")
+
+
+
+# Visualise ---------------------------------------------------------------
+
+temp <- melt(getReducedDim(ring_hard, "UMAP-MNN_30"),
              measure.vars = patterns("^slingPseudotime"),
              variable.name = "trajectory", value.name = "pseudotime")
 temp$trajectory <- gsub("slingPseudotime_", "Trajectory ", temp$trajectory)
 
-ggplot(temp[order(trajectory, pseudotime, na.last = FALSE)],
-       aes(V1, V2)) +
+ring_hard %>%
+  getReducedDim("UMAP30_MNN_logvst") %>%
+  pivot_longer(matches("^slingPseudotime"),
+               values_to = "pseudotime", names_to = "trajectory") %>%
+  mutate(trajectory = gsub("slingPseudotime_", "Trajectory ", trajectory)) %>%
+  arrange(trajectory, !is.na(pseudotime), pseudotime) %>%
+  ggplot(aes(V1, V2)) +
   geom_point(aes(colour = pseudotime), alpha = 0.1) +
-  geom_point(stat = "centroid", aes(group = cluster_mnn), shape = 21, size = 5,
+  geom_point(stat = "centroid", aes(group = cluster_mnn_logvst), shape = 21, size = 5,
              fill = "white", alpha = 0.7) +
   geom_text(stat = "centroid",
-            aes(group = cluster_mnn, label = cluster_mnn)) +
+            aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst)) +
   facet_wrap(~ trajectory, ncol = 2) +
-  scale_colour_viridis_c(option = "inferno") +
+  scale_colour_viridis_c(option = "inferno", na.value = "lightgrey") +
   coord_fixed() +
-  labs(x = "UMAP 1", y = "UMAP 2", subtitle = "All cells, all clusters")
+  labs(x = "UMAP1", y = "UMAP2") +
+  theme(axis.text = element_blank(), axis.ticks = element_blank())
 
 
 # this is not working quite like I wanted it to...
@@ -72,9 +84,9 @@ gene_sets[, alternative_name := ifelse(is.na(gene_name), gene_ID,
                                        ifelse(is.na(gene_name2), gene_name,
                                               paste(gene_name, gene_name2, sep = "/")))]
 
-# temp <- getReducedDim(ring_soft, "UMAP-MNN_30", genes = gene_sets$gene_ID, melted = FALSE)
-pseudotime <- ring_soft$slingPseudotime_1[which(!is.na(ring_soft$slingPseudotime_1))]
-temp <- logcounts(ring_soft)[, which(!is.na(ring_soft$slingPseudotime_1))]
+# temp <- getReducedDim(ring_hard, "UMAP-MNN_30", genes = gene_sets$gene_ID, melted = FALSE)
+pseudotime <- ring_hard$slingPseudotime_1[which(!is.na(ring_hard$slingPseudotime_1))]
+temp <- logcounts(ring_hard)[, which(!is.na(ring_hard$slingPseudotime_1))]
 temp <- temp[which(rownames(temp) %in% gene_sets$gene_ID), ]
 temp <- temp[, order(pseudotime)]
 
@@ -91,7 +103,7 @@ library(scran); library(batchelor)
 # cluster 3 + 10 - CC
 # cluster 5 - pSE
 # cluster 4 (& 8?) - cell cycle
-ring_subset <- ring_soft[, which(ring_soft$cluster_mnn %in% c(1, 3, 10, 5, 4, 8))]
+ring_subset <- ring_hard[, which(ring_hard$cluster_mnn %in% c(1, 3, 10, 5, 4, 8))]
 
 # # remove old dimreds
 # for(i in reducedDimNames(ring_subset)){
@@ -215,15 +227,15 @@ ggplot(temp[order(trajectory, pseudotime, na.last = FALSE)],
 # Trajectory on individual clusters ---------------------------------------
 
 # Clusters inferred to be PPP
-ppp <- runSlingshot(ring_soft[, which(ring_soft$cluster_mnn %in% c(3, 10))],
+ppp <- runSlingshot(ring_hard[, which(ring_hard$cluster_mnn %in% c(3, 10))],
                     use.dimred = "DIFFMAP-MNN")
 
 # Clusters inferred to be CC
-cc <- runSlingshot(ring_soft[, which(ring_soft$cluster_mnn %in% c(1))],
+cc <- runSlingshot(ring_hard[, which(ring_hard$cluster_mnn %in% c(1))],
                     use.dimred = "DIFFMAP-MNN")
 
 # Clusters inferred to be MSE/PSE
-se <- runSlingshot(ring_soft[, which(ring_soft$cluster_mnn %in% c(5))],
+se <- runSlingshot(ring_hard[, which(ring_hard$cluster_mnn %in% c(5))],
                    use.dimred = "DIFFMAP-MNN")
 
 # Visualise

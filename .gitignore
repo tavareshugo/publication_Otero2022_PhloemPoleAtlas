@@ -1,5 +1,8 @@
 *
 !.gitignore
+!analysis
+!analysis/*
+!analysis/functions/*
 !workflow
 !workflow/*
 !workflow/envs/*
@@ -7,3 +10,4 @@
 !README.md
 !*.Rproj
 .Rhistory
+.Rproj.user

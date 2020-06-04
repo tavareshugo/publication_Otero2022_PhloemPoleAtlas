@@ -19,15 +19,26 @@ source("analysis/functions/utils.R")
 
 # ring data both soft and hard filtered
 ring_soft <- readRDS("data/processed/SingleCellExperiment/ring_batches_softfilt.rds")
-# ring_hard <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
+ring_hard <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
 
 
 # Find markers ----------------------------------------------
 
+# visualise
+ggplot(getReducedDim(ring_hard, "UMAP30_MNN_logvst"),
+       aes(V1, V2)) +
+  geom_point(aes(colour = cluster_mnn_logvst)) +
+  geom_label(stat = "centroid",
+             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
+             alpha = 0.8, label.padding = unit(0.1, "lines")) +
+  ggthemes::scale_colour_tableau(palette = "Tableau 20") +
+  labs(x = "UMAP1", y = "UMAP2", colour = "Cluster")
+
 # This runs test for each marker - useful for checking cell types from known genes
-markers <- findMarkers(ring_soft,
-                       groups = ring_soft$cluster_mnn,
-                       block = ring_soft$Sample,
+markers <- findMarkers(ring_hard,
+                       assay.type = "logvst",
+                       groups = ring_hard$cluster_mnn_logvst,
+                       block = ring_hard$Sample,
                        test = "wilcox", direction = "up",
                        pval.type = "some", min.prop = 0.9)
 
@@ -38,12 +49,14 @@ markers <- lapply(markers, function(i){
 markers <- rbindlist(markers, idcol = "cluster", fill = TRUE)
 markers[, cluster := factor(as.numeric(cluster))]
 
+fwrite(markers, "data/processed/gene_sets/cluster_markers_hardfilt.csv")
+
 
 # Cell cycle --------------------------------------------------------------
 
 # Fetch cyclin gene IDs
-cyclins <- rowData(ring_soft)[grep("CYC[A,B,D]",
-                                   rowData(ring_soft)$alternative_name,
+cyclins <- rowData(ring_hard)[grep("CYC[A,B,D]",
+                                   rowData(ring_hard)$alternative_name,
                                    ignore.case = TRUE), ]
 cyclins <- as.data.table(cyclins) # convert to DT
 # clean up the names a bit
@@ -52,32 +65,27 @@ cyclins[, cyclin := gsub("^CYC|[0-9].*$", "", alternative_name)]
 
 
 # Make plot
-temp <- getReducedDim(ring_soft, "UMAP-MNN_30", genes = cyclins$ID,
+temp <- getReducedDim(ring_hard, "UMAP30_MNN_logvst", genes = cyclins$ID,
+                      exprs_values = "logvst",
                       melted = TRUE)
 temp <- merge(temp, cyclins, by.x = "id", by.y = "ID", all.x = TRUE)
 
-p1 <- ggplot(getReducedDim(ring_soft, "UMAP-MNN_30"), aes(V1, V2, group = cluster_mnn)) +
-  geom_point(aes(colour = cluster_mnn), show.legend = FALSE) +
-  geom_text(stat = "centroid", aes(label = cluster_mnn), fontface = "bold", size = 4) +
+p1 <- ggplot(getReducedDim(ring_hard, "UMAP30_MNN_logvst"), aes(V1, V2, group = cluster_mnn_logvst)) +
+  geom_point(aes(colour = cluster_mnn_logvst), show.legend = FALSE) +
+  geom_text(stat = "centroid", aes(label = cluster_mnn_logvst), fontface = "bold", size = 4) +
   ggthemes::scale_colour_tableau(palette = "Tableau 20") +
-  labs(x = "UMAP 1", y = "UMAP 2") +
-  coord_fixed()
-
-p2 <- ggplot(getReducedDim(ring_soft, "UMAP-MNN_30"),
-       aes(V1, V2, colour = total < 1000)) +
-  geom_point() +
   labs(x = "UMAP 1", y = "UMAP 2") +
   coord_fixed()
 
 p3 <- ggplot(temp, aes(paste(Sample, Barcode), alternative_name)) +
   geom_tile(aes(fill = expr)) +
-  facet_grid(cyclin ~ cluster_mnn, scales = "free", space = "free") +
+  facet_grid(cyclin ~ cluster_mnn_logvst, scales = "free", space = "free") +
   scale_fill_viridis_c(na.value = "lightgrey") +
   theme_classic() +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   labs(x = "Cell", y = "Gene")
 
-(p1 | p2) / p3 + plot_annotation(tag_levels = "A")
+(p1 / p3) + plot_annotation(tag_levels = "A")
 
 
 # plot test result
@@ -94,7 +102,7 @@ ggplot(merge(markers, cyclins, by.x = "id", by.y = "ID"),
 # read known genes
 gene_sets <- readxl::read_xlsx("data/raw/gene_expression_patterns_root_SO.xlsx")
 gene_sets <- as.data.table(gene_sets)
-gene_sets <- gene_sets[gene_ID %in% rownames(ring_soft), ]
+gene_sets <- gene_sets[gene_ID %in% rownames(ring_hard), ]
 
 gene_sets <- melt(gene_sets, id.vars = c("gene_name", "gene_name2", "gene_ID", "NOTES"),
                   variable.name = "tissue", value.name = "expressed")
@@ -131,9 +139,11 @@ pheatmap::pheatmap(temp,
 
 # Analysis of subsets -----------------------------------------------------
 
+## TODO - from hereon things are outdated! (still using previous iteration of analysis)
+
 # Exclude clusters 4 & 8 (cell cycle), 5 (pSE), 7 & 11 (outer layers), and 2 & 6 & 9 (low counts)
 # in other words keep only clusters 1, 3, 10
-ring_subset <- ring_soft[, which(ring_soft$cluster_mnn %in% c(1, 3, 10))]
+ring_subset <- ring_hard[, which(ring_hard$cluster_mnn_logvst %in% c(1, 3, 10))]
 
 # remove old dims
 for(i in reducedDimNames(ring_subset)){
@@ -155,11 +165,11 @@ reducedDim(ring_subset, "MNN_corrected") <- reducedDim(ring_subset_mnn, "correct
 rm(ring_subset_mnn); gc()
 
 # Clustering
-ring_subset$cluster_mnn_old <- ring_subset$cluster_mnn
+ring_subset$cluster_mnn_logvst_old <- ring_subset$cluster_mnn_logvst
 graph_subset <-buildSNNGraph(ring_subset, k = 100,
                              use.dimred = "MNN_corrected",
                              type = "jaccard")
-ring_subset$cluster_mnn <- factor(igraph::cluster_louvain(graph_subset)$membership)
+ring_subset$cluster_mnn_logvst <- factor(igraph::cluster_louvain(graph_subset)$membership)
 rm(graph_subset)
 
 # PCA
@@ -167,27 +177,27 @@ reducedDim(ring_subset, "PCA") <- calculatePCA(ring_subset,
                                                subset_row = metadata(ring_subset)$hvgs)
 
 # UMAP
-reducedDim(ring_subset, "UMAP-MNN_30") <- calculateUMAP(ring_subset,
+reducedDim(ring_subset, "UMAP30_MNN_logvst") <- calculateUMAP(ring_subset,
                                                         dimred = "MNN_corrected",
                                                         n_neighbors = 30)
 
 # visualise
-ggplot(getReducedDim(ring_subset, "UMAP-MNN_30"),
+ggplot(getReducedDim(ring_subset, "UMAP30_MNN_logvst"),
        aes(V1, V2)) +
-  geom_point(aes(colour = cluster_mnn), show.legend = FALSE) +
-  geom_point(stat = "centroid", aes(group = cluster_mnn),
+  geom_point(aes(colour = cluster_mnn_logvst), show.legend = FALSE) +
+  geom_point(stat = "centroid", aes(group = cluster_mnn_logvst),
              shape = 21, size = 5, fill = "white", alpha = 0.7) +
   geom_text(stat = "centroid",
-            aes(group = cluster_mnn, label = cluster_mnn)) +
+            aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst)) +
   ggthemes::scale_colour_tableau(palette = "Tableau 20") +
   labs(x = "UMAP 1", y = "UMAP 2")
 
-ggplot(colData(ring_subset), aes(cluster_mnn_old, cluster_mnn)) +
+ggplot(colData(ring_subset), aes(cluster_mnn_logvst_old, cluster_mnn_logvst)) +
   geom_count()
 
 
 # This runs test for each marker - useful for checking cell types from known genes
-markers <- findMarkers(ring_subset, groups = ring_subset$cluster_mnn,
+markers <- findMarkers(ring_subset, groups = ring_subset$cluster_mnn_logvst,
                        block = ring_subset$Sample,
                        test = "wilcox", direction = "up",
                        pval.type = "some", min.prop = 5/7)
@@ -241,13 +251,13 @@ pheatmap::pheatmap(temp,
 # Most informative genes (according to microscopy)
 
 # S17 & CALS8 helps identify region of PPP cells
-temp <- getReducedDim(ring_soft, "UMAP-MNN_30",
+temp <- getReducedDim(ring_hard, "UMAP30_MNN_logvst",
               genes = c("AT2G22850", "AT3G14570"), melted = TRUE)
 
 ggplot(temp[order(expr, na.last = FALSE)], aes(V1, V2)) +
   geom_point(aes(colour = expr)) +
   geom_label(stat = "centroid",
-            aes(group = cluster_mnn, label = cluster_mnn),
+            aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
             alpha = 0.5) +
   scale_colour_viridis_c() +
   facet_grid(~ id) +
@@ -256,7 +266,7 @@ ggplot(temp[order(expr, na.last = FALSE)], aes(V1, V2)) +
 ggplot(temp, aes(V1, V2)) +
   geom_point(aes(colour = expr)) +
   geom_label(stat = "centroid",
-             aes(group = cluster_mnn, label = cluster_mnn),
+             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.5) +
   scale_colour_viridis_c() +
   facet_grid(~ id) +
@@ -266,20 +276,20 @@ ggplot(temp, aes(V1, V2)) +
   geom_point(colour = "lightgrey") +
   ggpointdensity::geom_pointdensity(data = temp[!is.na(expr)]) +
   geom_label(stat = "centroid",
-             aes(group = cluster_mnn, label = cluster_mnn),
+             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.5) +
   scale_colour_viridis_c(option = "magma") +
   facet_grid(~ id) +
   labs(x = "UMAP 1", y = "UMAP 2", subtitle = "Phloem Pole Pericycle markers")
 
 # CC markers
-temp <- getReducedDim(ring_soft, "UMAP-MNN_30",
+temp <- getReducedDim(ring_hard, "UMAP30_MNN_logvst",
                       genes = c("AT3G12730", "AT5G57350", "AT1G22710"), melted = TRUE)
 
 p1 <- ggplot(temp[order(expr, na.last = FALSE)], aes(V1, V2)) +
   geom_point(aes(colour = expr)) +
   geom_label(stat = "centroid",
-             aes(group = cluster_mnn, label = cluster_mnn),
+             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.5) +
   scale_colour_viridis_c() +
   facet_grid(~ id) +
@@ -289,7 +299,7 @@ p2 <- ggplot(temp, aes(V1, V2)) +
   geom_point(colour = "lightgrey") +
   ggpointdensity::geom_pointdensity(data = temp[!is.na(expr)], show.legend = FALSE) +
   geom_label(stat = "centroid",
-             aes(group = cluster_mnn, label = cluster_mnn),
+             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.5) +
   scale_colour_viridis_c(option = "magma") +
   facet_grid(~ id) +
@@ -304,12 +314,12 @@ p1 / p2
 # this is what is used by Denyer et al their Fig 1B
 
 # Get those genes
-temp <- getReducedDim(ring_soft, type = "UMAP-MNN_30",
+temp <- getReducedDim(ring_hard, type = "UMAP30_MNN_logvst",
                       genes = unique(gene_sets$gene_ID), melted = TRUE)
-temp <- temp[, c("id", "expr", "cluster_mnn")]
+temp <- temp[, c("id", "expr", "cluster_mnn_logvst")]
 
 # calculate total number of genes in a cluster
-temp[, ngenes_cluster := .N, by = .(cluster_mnn)]
+temp[, ngenes_cluster := .N, by = .(cluster_mnn_logvst)]
 
 # remove cells with no expression for the gene
 temp <- temp[expr > 0]
@@ -321,14 +331,14 @@ temp[, expr_scaled := scale(expr), by = id]
 temp <- temp[, .(expr_mean = mean(expr),
                  expr_scaled_mean = mean(expr_scaled),
                  nexpr = .N),
-             by = .(id, cluster_mnn, ngenes_cluster)]
+             by = .(id, cluster_mnn_logvst, ngenes_cluster)]
 
 # merge with annotated table of genes
 temp <- merge(temp, unique(gene_sets[, .(alternative_name, gene_ID)]),
               by.x = "id", by.y = "gene_ID", allow.cartesian = TRUE)
 
 ggplot(temp,
-       aes(factor(cluster_mnn), alternative_name, size = nexpr/ngenes_cluster*100)) +
+       aes(factor(cluster_mnn_logvst), alternative_name, size = nexpr/ngenes_cluster*100)) +
   geom_point(aes(colour = expr_scaled_mean)) +
   scale_colour_viridis_c() +
   labs(x = "Cluster", y = "Gene", colour = "Mean\nexpr", size = "Percentage")
