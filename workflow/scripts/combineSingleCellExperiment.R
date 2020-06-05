@@ -176,8 +176,9 @@ vst_norm <- vst(umi = counts(sce_all),
                 return_corrected_umi = TRUE)
 
 # add the model matrices to assay slot
-assay(sce_all, "vst") <- vst_norm$umi_corrected
-assay(sce_all, "logvst") <- log1p(assay(sce_all, "vst"))
+assay(sce_all, "vstcts") <- vst_norm$umi_corrected
+assay(sce_all, "vstlog") <- log1p(assay(sce_all, "vst"))
+assay(sce_all, "vstres") <- vst_norm$y
 
 # get the most variable (nuclear) genes according to this model
 temp <- vst_norm$gene_attr[metadata(sce_all)$nucgenes, ]
