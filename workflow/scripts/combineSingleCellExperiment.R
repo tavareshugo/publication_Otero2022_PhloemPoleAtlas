@@ -177,7 +177,7 @@ vst_norm <- vst(umi = counts(sce_all),
 
 # add the model matrices to assay slot
 assay(sce_all, "vstcts") <- vst_norm$umi_corrected
-# assay(sce_all, "vstres") <- log1p(assay(sce_all, "vstcts"))
+assay(sce_all, "vstlog") <- log1p(assay(sce_all, "vst"))
 assay(sce_all, "vstres") <- vst_norm$y
 
 # get the most variable (nuclear) genes according to this model
@@ -202,9 +202,9 @@ reducedDim(sce_all, "MNN_logcounts") <- reducedDim(sce_all_mnn, "corrected")
 sce_all_mnn <- fastMNN(sce_all,
                        batch = colData(sce_all)$Sample,
                        subset.row = metadata(sce_all)$nucgenes,
-                       assay.type = "vstres",
+                       assay.type = "logvst",
                        BPPARAM = options$cores)
-reducedDim(sce_all, "MNN_vstres") <- reducedDim(sce_all_mnn, "corrected")
+reducedDim(sce_all, "MNN_logvst") <- reducedDim(sce_all_mnn, "corrected")
 
 rm(sce_all_mnn) # free-up memory
 
@@ -251,12 +251,12 @@ reducedDim(sce_all, "PCA_logcounts") <- calculatePCA(sce_all,
 # attr(reducedDim(sce_all, "PCA_logcounts"), "pc70") <-  min(which(cumsum(pc_variance) >= 70))
 
 # PCA - on VST logcounts
-reducedDim(sce_all, "PCA_vstres") <- calculatePCA(sce_all,
-                                                  exprs_values = "vstres",
+reducedDim(sce_all, "PCA_logvst") <- calculatePCA(sce_all,
+                                                  exprs_values = "logvst",
                                                   subset_row = metadata(sce_all)$hvgs_vst)
-# pc_variance <- attr(reducedDim(sce_all, "PCA_vstres"), "percentVar")
-# attr(reducedDim(sce_all, "PCA_vstres"), "elbow") <- PCAtools::findElbowPoint(pc_variance)
-# attr(reducedDim(sce_all, "PCA_vstres"), "pc70") <-  min(which(cumsum(pc_variance) >= 70))
+# pc_variance <- attr(reducedDim(sce_all, "PCA_logvst"), "percentVar")
+# attr(reducedDim(sce_all, "PCA_logvst"), "elbow") <- PCAtools::findElbowPoint(pc_variance)
+# attr(reducedDim(sce_all, "PCA_logvst"), "pc70") <-  min(which(cumsum(pc_variance) >= 70))
 
 # UMAP with different n_neighbors (uwot::umap default is 15)
 # number of neighbours refers to how many neighbours are used for the computation
@@ -273,9 +273,9 @@ for(i in c(7, 15, 30, 100)){
                   n_dimred = 10,
                   n_neighbors = i)
 
-  reducedDim(sce_all, paste0("UMAP", i, "_vstres")) <-
+  reducedDim(sce_all, paste0("UMAP", i, "_logvst")) <-
     calculateUMAP(sce_all,
-                  dimred = "PCA_vstres",
+                  dimred = "PCA_logvst",
                   n_dimred = 10,
                   n_neighbors = i)
 
@@ -285,10 +285,10 @@ for(i in c(7, 15, 30, 100)){
                   dimred = "MNN_logcounts",
                   n_neighbors = i)
 
-  # MNN-corrected data on vstres
-  reducedDim(sce_all, paste0("UMAP", i, "_MNN_vstres")) <-
+  # MNN-corrected data on logvst
+  reducedDim(sce_all, paste0("UMAP", i, "_MNN_logvst")) <-
     calculateUMAP(sce_all,
-                  dimred = "MNN_vstres",
+                  dimred = "MNN_logvst",
                   n_neighbors = i)
 }
 
@@ -305,9 +305,9 @@ for(i in c(15, 30, 60)){
                   n_dimred = 10,
                   n_neighbors = i)
 
-  reducedDim(sce_all, paste0("TSNE", i, "_vstres")) <-
+  reducedDim(sce_all, paste0("TSNE", i, "_logvst")) <-
     calculateTSNE(sce_all,
-                  dimred = "PCA_vstres",
+                  dimred = "PCA_logvst",
                   n_dimred = 10,
                   n_neighbors = i)
 
@@ -317,10 +317,10 @@ for(i in c(15, 30, 60)){
                   dimred = "MNN_logcounts",
                   n_neighbors = i)
 
-  # MNN-corrected data on vstres
-  reducedDim(sce_all, paste0("TSNE", i, "_MNN_vstres")) <-
+  # MNN-corrected data on logvst
+  reducedDim(sce_all, paste0("TSNE", i, "_MNN_logvst")) <-
     calculateTSNE(sce_all,
-                  dimred = "MNN_vstres",
+                  dimred = "MNN_logvst",
                   n_neighbors = i)
 }
 
@@ -333,9 +333,9 @@ reducedDim(sce_all, "DIFFMAP_logcounts") <-
                         ncomponents = 10,
                         n_dimred = 10)
 
-reducedDim(sce_all, "DIFFMAP_vstres") <-
+reducedDim(sce_all, "DIFFMAP_logvst") <-
   calculateDiffusionMap(sce_all,
-                        dimred = "PCA_vstres",
+                        dimred = "PCA_logvst",
                         ncomponents = 10,
                         n_dimred = 10)
 
@@ -344,10 +344,10 @@ reducedDim(sce_all, "DIFFMAP_MNN_logcounts") <-
                         ncomponents = 10,
                         dimred = "MNN_logcounts")
 
-reducedDim(sce_all, "DIFFMAP_MNN_vstres") <-
+reducedDim(sce_all, "DIFFMAP_MNN_logvst") <-
   calculateDiffusionMap(sce_all,
                         ncomponents = 10,
-                        dimred = "MNN_vstres")
+                        dimred = "MNN_logvst")
 
 
 # Clustering --------------------------------------------------------------
@@ -355,7 +355,7 @@ set.seed(1590572757)
 
 # Graph-based clustering (essentially similar to Seurat's implementation)
 for(i in c("PCA", "MNN")){
-  for(ii in c("logcounts", "vstres")){
+  for(ii in c("logcounts", "logvst")){
     message("clustering with ", paste(i, ii, sep = "_"))
 
     # compute graph
