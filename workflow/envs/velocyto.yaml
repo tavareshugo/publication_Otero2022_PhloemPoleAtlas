@@ -1,0 +1,16 @@
+name: velocyto
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - samtools
+  - numpy
+  - scipy
+  - cython
+  - numba
+  - matplotlib
+  - scikit-learn
+  - h5py
+  - click
+  - pip:
+    - velocyto==0.17.17

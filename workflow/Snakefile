@@ -10,10 +10,10 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 
 rule all:
   input:
-    expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"])
+    expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
     # "data/processed/SingleCellExperiment/all_batches.rds",
     # "data/processed/SingleCellExperiment/ring_batches.rds"
-    
+    expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"])
     # expand("data/processed/SingleCellExperiment/{sample}", sample = sample_info["sample"])
     # "data/external/denyer2019/rep1", 
     # "data/external/denyer2019/rep2",
@@ -142,6 +142,25 @@ rule combineSingleCellExperiment:
     "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R {params.filters} --cores {threads} --out {output} {input} > {log} 2>&1"
 
 
+#### RNA velocity
+
+rule velocyto:
+  input:
+    cellranger="data/intermediate/counts_cellranger/{sample}",
+    gtf="data/external/reference/annotation.gtf"
+  output:
+    "data/intermediate/velocyto/{sample}.loom"
+  params:
+    runtime = "07:00:00"
+  log:
+    "logs/velocyto/velocyto_{sample}.log"
+  conda:
+    "envs/velocyto.yaml"
+  threads: 32
+  shell:
+    "(velocyto run10x {input.cellranger} {input.gtf}"
+    "; mv data/intermediate/counts_cellranger/{wildcards.sample}/velocyto/{wildcards.sample}.loom {output}) "
+    "> {log} 2>&1"
 
 
 # ### alevin
