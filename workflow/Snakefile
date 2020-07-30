@@ -11,6 +11,7 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 rule all:
   input:
     expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
+    expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
     # "data/processed/SingleCellExperiment/all_batches.rds",
     # "data/processed/SingleCellExperiment/ring_batches.rds"
     expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"])
@@ -141,6 +142,29 @@ rule combineSingleCellExperiment:
   shell:
     "Rscript --vanilla workflow/scripts/combineSingleCellExperiment.R {params.filters} --cores {threads} --out {output} {input} > {log} 2>&1"
 
+
+# combine and batch-normalise all the samples
+rule combineSingleCellExperiment2:
+  input:
+    # getSCE
+    lambda wildcards: expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo])
+  output:
+    "data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds"
+    # "data/processed/SingleCellExperiment/{files}_batches_{filt}.rds"
+    # "data/processed/SingleCellExperiment/all_batches.rds",
+    # "data/processed/SingleCellExperiment/ring_batches.rds"
+    # "data/processed/SingleCellExperiment/all_batches_mnn.rds",
+    # "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
+  params:
+    filters = lambda wildcards: config["filters"][wildcards.filt],
+    runtime = "07:00:00"
+  log:
+    "logs/SingleCellExperimentGLM/combineSingleCellExperiment_{combo}_{filt}.log"
+  conda:
+    "envs/SingleCellExperiment.yaml"
+  threads: 32
+  shell:
+    "Rscript --vanilla workflow/scripts/combineSingleCellExperimentGLM.R {params.filters} --cores {threads} --out {output} {input} > {log} 2>&1"
 
 #### RNA velocity
 

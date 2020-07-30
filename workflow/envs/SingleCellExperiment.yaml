@@ -22,4 +22,4 @@ dependencies:
   - r-sctransform=0.2
   # - bioconductor-pcatools=2.0
   # - bioconductor-zinbwave=1.8
-  # - r-glmpca=0.1.0.dev1
+  # - r-glmpca=0.1.0
