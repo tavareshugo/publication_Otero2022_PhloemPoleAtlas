@@ -12,13 +12,8 @@ rule all:
   input:
     expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
     expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
-    # "data/processed/SingleCellExperiment/all_batches.rds",
-    # "data/processed/SingleCellExperiment/ring_batches.rds"
-    expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"])
-    # expand("data/processed/SingleCellExperiment/{sample}", sample = sample_info["sample"])
-    # "data/external/denyer2019/rep1", 
-    # "data/external/denyer2019/rep2",
-    # "data/external/reference/cellranger_index"
+    expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"]),
+    "data/intermediate/expression_network/ring_hardfilt_network.rds"
     
 
 ### fetch reference annotation
@@ -186,6 +181,23 @@ rule velocyto:
     "; mv data/intermediate/counts_cellranger/{wildcards.sample}/velocyto/{wildcards.sample}.loom {output}) "
     "> {log} 2>&1"
 
+
+#### Expression Network 
+
+rule expressionNetwork:
+  input:
+    "data/processed/SingleCellExperiment/ring_batches_hardfilt.rds"
+  output:
+    "data/intermediate/expression_network/ring_hardfilt_network.rds"
+  params:
+    runtime = "07:00:00"
+  log:
+    "logs/bigSCale/expressionNetwork.log"
+  conda:
+    "envs/bigSCale.yaml"
+  threads: 8
+  shell:
+    "Rscript --vanilla workflow/scripts/expressionNetwork.R > {log} 2>&1"
 
 # ### alevin
 # from glob import glob

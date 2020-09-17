@@ -1,0 +1,28 @@
+name: bigScale
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - r-rcpp
+  - bioconductor-singlecellexperiment
+  - r-rfast
+  - r-rtsne
+  - r-float
+  - r-ggplot2
+  - r-zoo
+  - r-dendextend
+  - bioconductor-bioqc
+  - r-igraph
+  - bioconductor-org.hs.eg.db
+  - bioconductor-org.mm.eg.db
+  - r-matrix
+  - r-rgooglemaps
+  - r-ggbeeswarm
+  - r-ggpubr
+  - r-plotly
+  - r-heatmap3
+  - r-progress
+  - r-bigmemory
+  - r-r.utils
+  - r-rjsonio
+  - r-remotes
