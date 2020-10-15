@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
   library(scran)
   library(scater)
   library(data.table)
+  library(mgcv)
 })
 
 
@@ -18,7 +19,6 @@ if (length(args) < 2) {
   stop("Input file does not exist: ", args[1])
 } else {
   infile <- args[1]
-  outfile <- args[2]
 }
 
 
@@ -44,24 +44,12 @@ graph <- buildSNNGraph(sce, k = 50,
 sce$clusters_slingshot <- factor(igraph::cluster_louvain(graph)$membership)
 rm(graph)
 
-# visualise
-sce %>%
-  getReducedDim("UMAP30_MNN_logvst") %>%
-  ggplot(aes(V1, V2)) +
-  geom_point(aes(colour = clusters_slingshot)) +
-  geom_label(stat = "centroid",
-             aes(group = clusters_slingshot, label = clusters_slingshot),
-             alpha = 0.8, label.padding = unit(0.1, "lines")) +
-  theme_void() +
-  ggthemes::scale_colour_tableau(palette = "Tableau 20") +
-  ggthemes::scale_fill_tableau(palette = "Tableau 20")
-
-
 
 # Fit trajectories --------------------------------------------------------
 message("Fitting trajectories...")
 
 # slingshot trajectories
+# start and end clusters are based on prior annotation
 sce <- slingshot(sce,
                  clusterLabels = sce$clusters_slingshot,
                  reducedDim = "DIFFMAP_MNN_logvst",
@@ -109,6 +97,7 @@ result <- rbindlist(result, idcol = "trajectory")
 
 
 # Write Result ------------------------------------------------------------
-message("Writing result as a CSV file...")
+message("Writing result...")
 
-fwrite(result, outfile, sep = ",")
+fwrite(result, "data/processed/trajectories/slingshot_trajectory_gam.csv", sep = ",")
+saveRDS(sce, "data/processed/trajectories/ring_hardfilt_slingshot.rds")
