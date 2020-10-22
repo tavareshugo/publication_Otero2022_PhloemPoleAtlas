@@ -4,22 +4,24 @@ channels:
   - conda-forge
   # - aksarkar 
 dependencies:
-  - r-optparse=1.6
-  - r-data.table=1.12
-  - r-rtsne=0.15
-  - r-uwot=0.1
-  - r-ggplot2=3.1
-  - r-ggpointdensity=0.1
-  - r-codetools=0.2_16
-  - bioconductor-destiny=2.15
-  - bioconductor-biomart=2.42
-  - bioconductor-dropletutils=1.6
-  - bioconductor-scater=1.14
-  - bioconductor-scran=1.14
-  - bioconductor-biocparallel=1.20
-  - bioconductor-edger=3.28
-  - bioconductor-batchelor=1.2
-  - r-sctransform=0.2
+  - r-optparse #=1.6
+  - r-data.table #=1.12
+  - r-mgcv #=1.8_33
+  - r-rtsne #=0.15
+  - r-uwot #=0.1
+  - r-ggplot2 #=3.1
+  - r-ggpointdensity #=0.1
+  - r-codetools #=0.2_16
+  - bioconductor-destiny #=2.15
+  - bioconductor-biomart #=2.42
+  - bioconductor-dropletutils #=1.6
+  - bioconductor-scater #=1.14
+  - bioconductor-scran #=1.14
+  - bioconductor-biocparallel #=1.20
+  - bioconductor-edger #=3.28
+  - bioconductor-batchelor #=1.2
+  - r-sctransform #=0.2
+  - bioconductor-slingshot #=1.6
   # - bioconductor-pcatools=2.0
   # - bioconductor-zinbwave=1.8
   # - r-glmpca=0.1.0

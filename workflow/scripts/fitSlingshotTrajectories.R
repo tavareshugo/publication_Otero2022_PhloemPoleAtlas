@@ -13,13 +13,18 @@ suppressPackageStartupMessages({
 # Fetch input and output file names
 args <- commandArgs(trailingOnly=TRUE)
 
-if (length(args) < 2) {
-  stop("Need to supply input and output file names")
-} else if (!file.exists(args[1])) {
-  stop("Input file does not exist: ", args[1])
-} else {
-  infile <- args[1]
+if (!file.exists(args[1])) {
+  stop("Input file does not exist: ", args[1])  
 }
+infile <- args[1]
+
+# if (length(args) < 2) {
+#   stop("Need to supply input and output file names")
+# } else if (!file.exists(args[1])) {
+#   stop("Input file does not exist: ", args[1])
+# } else {
+#   infile <- args[1]
+# }
 
 
 # Read data ---------------------------------------------------------------

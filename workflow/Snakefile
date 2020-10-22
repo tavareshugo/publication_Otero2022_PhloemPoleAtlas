@@ -13,7 +13,9 @@ rule all:
     expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
     expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
     expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"]),
-    "data/intermediate/expression_network/ring_hardfilt_network.rds"
+    "data/intermediate/expression_network/ring_hardfilt_network.rds",
+    "data/processed/trajectories/ring_hardfilt_slingshot.rds",
+    "data/processed/trajectories/slingshot_trajectory_gam.csv"
     
 
 ### fetch reference annotation
@@ -152,7 +154,7 @@ rule combineSingleCellExperiment2:
     # "data/processed/SingleCellExperiment/ring_batches_mnn.rds"
   params:
     filters = lambda wildcards: config["filters"][wildcards.filt],
-    runtime = "07:00:00"
+    runtime = "12:00:00"
   log:
     "logs/SingleCellExperimentGLM/combineSingleCellExperiment_{combo}_{filt}.log"
   conda:
@@ -199,37 +201,22 @@ rule expressionNetwork:
   shell:
     "Rscript --vanilla workflow/scripts/expressionNetwork.R > {log} 2>&1"
 
-# ### alevin
-# from glob import glob
 
-# rule alevin:
-#   input:
-#     r1 = lambda wildcards: glob(sample_info.loc[wildcards.sample, "fq1"]),
-#     r2 = lambda wildcards: glob(sample_info.loc[wildcards.sample, "fq2"])
-#   output:
-#     directory("data/intermediate/counts/{sample}_alevin")
-#   threads: 12
-#   params:
-#     cells = lambda wildcards: sample_info.loc[wildcards.sample, "cells"],
-#     idx = config["salmon_index"],
-#     transcript2gene = config["transcript2gene"]
-#   shell:
-#     "salmon alevin \
-#       -l ISR \
-#       -1 {input.r1} \
-#       -2 {input.r2} \
-#       --chromiumV3 \
-#       --dumpFeatures \
-#       -i {params.idx} \
-#       --expectCells {params.cells} \
-#       -p {threads} \
-#       -o {output} \
-#       --tgMap {params.transcript2gene}"
+#### Slingshot trajectories
 
-# rule alevin_qc:
-#   input:
-#     "data/intermediate/counts/{sample}_alevin"
-#   output:
-#     "data/intermediate/counts/{sample}_alevin/{sample}_qc.html"
-#   shell:
-#     "touch {output}"
+rule slingshotTrajectories:
+  input:
+    "data/processed/SingleCellExperiment/ring_batches_hardfilt.rds"
+  output:
+    "data/processed/trajectories/ring_hardfilt_slingshot.rds",
+    "data/processed/trajectories/slingshot_trajectory_gam.csv"
+  params:
+    runtime = "07:00:00"
+  log:
+    "logs/slingshot/slingshotTrajectories.log"
+  conda:
+    "envs/SingleCellExperiment.yaml"
+  threads: 4
+  shell:
+    "Rscript --vanilla workflow/scripts/fitSlingshotTrajectories.R {input} > {log} 2>&1"
+
