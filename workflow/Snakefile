@@ -11,9 +11,9 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 rule all:
   input:
     expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
-    expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
+    #expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
     expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"]),
-    "data/intermediate/expression_network/ring_hardfilt_network.rds",
+    #"data/intermediate/expression_network/ring_hardfilt_network.rds",
     "data/processed/trajectories/ring_hardfilt_slingshot.rds",
     "data/processed/trajectories/slingshot_trajectory_gam.csv"
     
