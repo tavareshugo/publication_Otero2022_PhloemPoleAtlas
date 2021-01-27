@@ -1,5 +1,4 @@
 library(tidyverse)
-library(furrr)
 library(patchwork)
 
 # set ggplot2 theme
@@ -9,7 +8,7 @@ theme_set(theme_bw() + theme(text = element_text(size = 14)))
 # Read data ---------------------------------------------------------------
 
 # get wilcox test results for each cluster
-cluster_test <- read_csv("data/processed/gene_sets/cluster_markers_hardfilt.csv",
+cluster_test <- read_csv("data/processed/gene_sets/ring_hardfilt_cluster_markers.csv",
                          guess_max = Inf) %>%
   mutate(cluster = factor(cluster))
 
@@ -109,6 +108,7 @@ regnet <- regnet %>%
   # ensure gene names are uppercase
   mutate(source = toupper(source), target = toupper(target))
 
+
 # Retain only genes in our expression data
 regnet <- regnet %>%
   filter(target %in% cluster_test$id)
@@ -188,7 +188,7 @@ targets_per_tf <- split(regnet, f = regnet$source) %>%
   map(~ pull(., target))
 
 # Run test for each TF
-target_enrich <- future_map_dfr(targets_per_tf, function(targets){
+target_enrich <- map_dfr(targets_per_tf, function(targets){
   genes_annotated %>%
     mutate(is_target = factor(id %in% targets, levels = c("TRUE", "FALSE"))) %>%
     nest(data = (-cluster)) %>%
