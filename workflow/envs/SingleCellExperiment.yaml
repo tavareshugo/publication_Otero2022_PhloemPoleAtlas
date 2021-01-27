@@ -20,7 +20,7 @@ dependencies:
   - bioconductor-biocparallel=1.22.0
   - bioconductor-edger=3.30.0
   - bioconductor-batchelor=1.4.0
-  - r-sctransform=0.3.1
+  - r-sctransform=0.2
   - bioconductor-slingshot=1.6.0
   # - bioconductor-pcatools=2.0
   # - bioconductor-zinbwave=1.8
