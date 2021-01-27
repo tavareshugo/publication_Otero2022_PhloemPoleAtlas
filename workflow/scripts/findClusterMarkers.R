@@ -31,13 +31,17 @@ sce <- sce[metadata(sce)$nucgenes, ]
 # Find markers ------------------------------------------------------------
 message("Finding markers...")
 
-# This runs test for each marker - useful for checking cell types from known genes
+# run test for each marker
 markers <- findMarkers(sce,
                        assay.type = "logvst",
                        groups = sce$cluster_mnn_logvst,
                        block = sce$Sample,
                        test = "wilcox", direction = "up",
-                       pval.type = "some", min.prop = 0.9)
+                       pval.type = "some",
+                       # initially ran this with 0.9 but that was a bit stringent
+                       min.prop = 0.5,
+                       # set fold-change
+                       lfc = log(1.5))
 
 # tidy up
 markers <- lapply(markers, function(i){
@@ -46,6 +50,14 @@ markers <- lapply(markers, function(i){
 markers <- rbindlist(markers, idcol = "cluster", fill = TRUE)
 markers[, cluster := factor(as.numeric(cluster))]
 
+
+
+# Add TF information ------------------------------------------------------
+
+# TFs
+tfs <- fread("data/external/transcription_factors/PlantTFDB_tidy.csv")
+
+markers[, is_tf := id %in% tfs$gene]
 
 
 # Write Result ------------------------------------------------------------
