@@ -157,6 +157,9 @@ while (sum(before - after) > 0) {
 sce_all <- multiBatchNorm(sce_all, batch = sce_all$Sample)
 metadata(sce_all) <- list() # reset metadata, because multiBatchNorm makes it weird
 
+# update nuclear genes ID
+metadata(sce_all)$nucgenes <- rownames(sce_all)[grep("AT[1,2,3,4,5]", rownames(sce_all))]
+
 message("After filtering: ", nrow(sce_all), " genes and ", ncol(sce_all), " cells.")
 
 
