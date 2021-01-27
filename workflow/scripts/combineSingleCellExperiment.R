@@ -74,8 +74,9 @@ files <- opt$args
 # options$n_hvgs <- 1000
 # options$out <- "data/processed/SingleCellExperiment/test.rds"
 # options$cores <- 2
-# files <- list.files(".", "_sce.rds", recursive = TRUE, full.names = TRUE)
+# files <- list.files("data/processed/SingleCellExperiment/", "_sce.rds", recursive = TRUE, full.names = TRUE)
 # files <- files[!grepl("denyer", files)]
+# files <- files[!grepl("mutant|wt", files)]
 
 # check inputs
 if(any(!file.exists(files))) stop("Some input files do not exist!")
@@ -126,30 +127,35 @@ if(!all(rownames(sce_all) == rowData(sce_all)$ID)) stop("rowData corruped!")
 # Filter data -------------------------------------------------------------
 message("Combined data before filtering: ", nrow(sce_all), " genes and ", ncol(sce_all), " cells.")
 
-#### Cell filtering
+# remove non-nuclear genes
+metadata(sce_all)$nucgenes <- rownames(sce_all)[grep("AT[1,2,3,4,5]", rownames(sce_all))]
+sce_all <- sce_all[metadata(sce_all)$nucgenes, ]
+
 # mitochondrial percent filter
 sce_all <- sce_all[, which(sce_all$subsets_mitochondria_percent <= options$max_mito_pct)]
 
-# retain cells with total counts >5% of 99th quantile
-# sce_all <- sce_all[, which((sce_all$total) >= (quantile((sce_all$total), 0.99) * 0.05))]
+# iterate through these filters until convergence
+before <- 1; after <- 0 # to initiate the while loop
+while (sum(before - after) > 0) {
+  # rows and cols before filtering
+  before <- dim(sce_all)
 
-# filter on total UMIs
-sce_all <- sce_all[, which(colSums(counts(sce_all)) >= options$min_total_umi_per_cell)]
+  # filter on total UMIs
+  sce_all <- sce_all[, which(colSums(counts(sce_all)) >= options$min_total_umi_per_cell)]
 
-# filter on detected genes
-sce_all <- sce_all[, which(colSums(counts(sce_all) >= options$min_gene_counts) >= options$min_genes_per_cell)]
+  # filter on detected genes
+  sce_all <- sce_all[, which(colSums(counts(sce_all) >= options$min_gene_counts) >= options$min_genes_per_cell)]
+
+  # remove genes that don't pass minimal thresholds
+  sce_all <- sce_all[which(rowSums(counts(sce_all) >= options$min_gene_counts) >= options$min_cells_gene_detected_in), ]
+
+  # rows and cols after filtering
+  after <- dim(sce_all)
+}
 
 # rescale logcounts within each batch (to account for different library sizes)
 sce_all <- multiBatchNorm(sce_all, batch = sce_all$Sample)
 metadata(sce_all) <- list() # reset metadata, because multiBatchNorm makes it weird
-
-
-#### filter genes
-# remove genes that don't pass minimal thresholds
-sce_all <- sce_all[which(rowSums(counts(sce_all) >= options$min_gene_counts) >= options$min_cells_gene_detected_in), ]
-
-# get ID of nuclear genes
-metadata(sce_all)$nucgenes <- rownames(sce_all)[grep("AT[1,2,3,4,5]", rownames(sce_all))]
 
 message("After filtering: ", nrow(sce_all), " genes and ", ncol(sce_all), " cells.")
 
