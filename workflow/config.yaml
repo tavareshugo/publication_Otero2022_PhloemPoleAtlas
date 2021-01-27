@@ -37,20 +37,53 @@ combine:
   ccc:
     - MAKR5_Col0_wt
     - MAKR5_ccc_mutant
-
+  wol:
+    - WOL
+    - double_WOL_MAKR5
+  ring_wol:
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
+    - WOL
+    - double_WOL_MAKR5
+  icals3m:
+    - PEAR1icals3m_beta_1
+    - PEAR1icals3m_beta_2
+    - PEAR1icals3m_DMSO_1
+    - PEAR1icals3m_DMSO_2
+  icals3m_ring:
+    - PEAR1icals3m_beta_1
+    - PEAR1icals3m_beta_2
+    - PEAR1icals3m_DMSO_1
+    - PEAR1icals3m_DMSO_2
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
+  nac:
+    - whole_root_wt
+    - whole_root_nac
 
 
 #### filters to apply ####
 
 filters:
-  nofilt:
-    "--min_total_umi_per_cell 1 --min_genes_per_cell 1 --min_cells_gene_detected_in 1 --min_gene_counts 1 --max_mito_pct 100 --n_hvgs 1000"
+  # nofilt:
+  #   "--min_total_umi_per_cell 1 --min_genes_per_cell 1 --min_cells_gene_detected_in 1 --min_gene_counts 1 --max_mito_pct 100 --n_hvgs 1000"
   softfilt:
     # "--min_total_umi_per_cell 1 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
     "--min_total_umi_per_cell 1 --min_genes_per_cell 1 --min_cells_gene_detected_in 3 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
-  mediumfilt:
-    # "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
-    "--min_total_umi_per_cell 1 --min_genes_per_cell 300 --min_cells_gene_detected_in 3 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
+  # mediumfilt:
+  #   # "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
+  #   "--min_total_umi_per_cell 1 --min_genes_per_cell 300 --min_cells_gene_detected_in 3 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
   hardfilt:
     # "--min_total_umi_per_cell 1000 --min_cells_gene_detected_in 5 --min_gene_counts 5 --max_mito_pct 10 --n_hvgs 2000"
     "--min_total_umi_per_cell 1 --min_genes_per_cell 500 --min_cells_gene_detected_in 5 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 1000"
+  strictfilt:
+    "--min_total_umi_per_cell 1 --min_genes_per_cell 2000 --min_cells_gene_detected_in 100 --min_gene_counts 1 --max_mito_pct 10 --n_hvgs 2000"
+
