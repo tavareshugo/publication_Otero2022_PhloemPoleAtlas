@@ -1,9 +1,9 @@
 #' fortify S3 method for BioConductor::DataFrame
-#'
-#' This allows using DFrame with ggplot2
-#'
-#' @param data a DataFrame object to plot.
-fortify.DFrame <- function(data) as.data.frame(data)
+.S3method("fortify",
+          "DataFrame",
+          function(x){
+            as.data.frame(x)
+          })
 
 #' helper function to fetch reducedDim data
 #' @param x a SingleCellExperiment object.
@@ -11,19 +11,18 @@ fortify.DFrame <- function(data) as.data.frame(data)
 #' @param colData logical indicating whether to include colData or not.
 #' @param genes a vector of gene names to get logcounts for.
 #' @param exprs_values the assay slot to retrive gene expression values from.
-#' @param as_dt a logical indicating whether the object retured should be a `data.table`.
 #' @param melted whether to return the table in a long format.
 #' @param zeros_to_na whether zero expression should be converted to NA.
 getReducedDim <- function(x, type = "UMAP", colData = TRUE, genes = NULL,
                           exprs_values = "logcounts",
-                          as_dt = TRUE, melted = FALSE, zeros_to_na = TRUE){
+                          melted = TRUE, zeros_to_na = TRUE){
   stopifnot(type %in% reducedDimNames(x))
 
   res <- data.table::as.data.table(reducedDim(x, type = type))
 
   # fetch colData
   if(colData){
-    res <- cbind(res, colData(x))
+    res <- cbind(res, data.table::as.data.table(colData(x)))
   }
 
   # fetch genes
@@ -54,8 +53,11 @@ getReducedDim <- function(x, type = "UMAP", colData = TRUE, genes = NULL,
     }
   }
 
-  if (as_dt) {
-    return(data.table::as.data.table(res))
+  if("data.table" %in% (.packages())){
+    setkey(res, NULL) # reset keys
+    return(res)
+  } else if ("tibble" %in% (.packages())){
+    return(tibble::as_tibble(res))
   } else {
     return(as.data.frame(res))
   }
