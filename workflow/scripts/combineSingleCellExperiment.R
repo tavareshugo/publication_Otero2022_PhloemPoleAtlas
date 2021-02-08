@@ -367,7 +367,7 @@ for(i in c("PCA", "MNN")){
     message("clustering with ", paste(i, ii, sep = "_"))
 
     # compute graph
-    graph <- buildSNNGraph(sce_all, k = 100, type = "jaccard",
+    graph <- buildSNNGraph(sce_all, k = 50, type = "jaccard",
                            use.dimred = paste(i, ii, sep = "_"))
 
     # add cluster membership to colData
