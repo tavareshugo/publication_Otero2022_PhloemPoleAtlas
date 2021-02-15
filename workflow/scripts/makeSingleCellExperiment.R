@@ -357,17 +357,18 @@ ggplot(colData(sce),
 
 # Make a graph to illustrate log-FC between lost and kept cells
 mito_rich <- colData(sce)$subsets_mitochondria_percent > 10
-lost <- calculateAverage(counts(sce)[,which(mito_rich), drop = FALSE])
-kept <- calculateAverage(counts(sce)[,which(!mito_rich), drop = FALSE])
+if(sum(mito_rich) > 0){
+  lost <- calculateAverage(counts(sce)[,which(mito_rich), drop = FALSE])
+  kept <- calculateAverage(counts(sce)[,which(!mito_rich), drop = FALSE])
 
-logged <- edgeR::cpm(cbind(lost, kept), log=TRUE, prior.count=2)
-logFC <- logged[,1] - logged[,2]
-abundance <- rowMeans(logged)
-qplot(abundance, logFC, geom = "point") +
-  geom_hline(yintercept = 0, colour = "dodgerblue") +
-  labs(x = "Mean CPM", y = "Log-FC (lost/kept)",
-       caption = "Comparing gene expression in group of cells with >10% vs <10% MT UMIs")
-
+  logged <- edgeR::cpm(cbind(lost, kept), log=TRUE, prior.count=2)
+  logFC <- logged[,1] - logged[,2]
+  abundance <- rowMeans(logged)
+  qplot(abundance, logFC, geom = "point") +
+    geom_hline(yintercept = 0, colour = "dodgerblue") +
+    labs(x = "Mean CPM", y = "Log-FC (lost/kept)",
+         caption = "Comparing gene expression in group of cells with >10% vs <10% MT UMIs")
+}
 
 # mean-variance plot - log-transformed counts
 ggplot(rowData(sce),
