@@ -1,0 +1,14 @@
+name: scvelo
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - pip
+#  - scvelo
+#  - scanpy=1.5.1
+  - pip:
+    - scvelo
+    - igraph
+    - anndata2ri
+    - louvain
+#    - loompy==3.0.6
