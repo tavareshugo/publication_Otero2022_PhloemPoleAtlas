@@ -1,3 +1,7 @@
+if(!("tradeSeq" %in% rownames(installed.packages()))){
+  BiocManager::install("tradeSeq")
+}
+
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
   library(slingshot)
@@ -33,9 +37,9 @@ message("Reading ", infile)
 
 sce <- readRDS(infile)
 
-# remove genes with too few counts
-sce <- sce[which(rowSums(counts(sce)) > 5), ] # at least total 5 counts
-sce <- sce[which(rowSums(counts(sce) > 1) > 5), ] # > 1 count in at least 5 cells
+# # remove genes with too few counts
+# sce <- sce[which(rowSums(counts(sce)) > 5), ] # at least total 5 counts
+# sce <- sce[which(rowSums(counts(sce) > 1) > 5), ] # > 1 count in at least 5 cells
 
 
 # Fit trajectories --------------------------------------------------------
@@ -67,16 +71,104 @@ tradeseq_sce <- fitGAM(counts = counts(sce[, rownames(pseudotime)]),
                        pseudotime = pseudotime,
                        cellWeights = cell_weights,
                        nknots = 7,
-                       verbose = TRUE,
-                       parallel = TRUE,
-                       BPARAM = BiocParallel::MulticoreParam(parallel::detectCores()))
+                       verbose = TRUE)
 
-if(any(!rowData(sce)$tradeSeq$converged)){
-  warning(sum(!rowData(sce)$tradeSeq$converged), " models didn't converge.")
+# sce <- fitGAM(counts = sce,
+#               nknots = 7,
+#               verbose = TRUE)
+
+
+# Trajectory tests --------------------------------------------------------
+
+# general change in time
+general_test <- associationTest(tradeseq, global = TRUE, lineages = TRUE)
+general_test <- data.table::as.data.table(general_test, keep.rownames = "gene")
+
+# difference between start and end (per lineage)
+start_end_lineage <- startVsEndTest(tradeseq, global = TRUE, lineages = TRUE)
+start_end_lineage <- data.table::as.data.table(start_end_lineage, keep.rownames = "gene")
+
+# pairwise comparisons for the expression at the end of the trajectory
+end_pairwise <- diffEndTest(tradeseq, global = TRUE, pairwise = TRUE)
+end_pairwise <- data.table::as.data.table(end_pairwise, keep.rownames = "gene")
+#end_res <- diffEndTest(tradeseq)
+
+# test if pattern of expression differs between trajectories
+pattern_pairwise <- patternTest(tradeseq, global = TRUE, pairwise = TRUE)
+pattern_pairwise <- data.table::as.data.table(pattern_pairwise, keep.rownames = "gene")
+
+
+# Fit GAM model to genes --------------------------------------------------
+# I also fit a model "manually"
+message("Fitting GAM models...")
+
+# this is similar to what is implemented in tradeSeq
+# but we fit to the normalised logcounts for visualisation purposes
+fit_gam <- function(Y, t){
+  ngenes <- nrow(Y)
+  gam_pvals <- vector("numeric", length = ngenes)
+  gam_rsq <- vector("numeric", length = ngenes)
+  gam_devexpl <- vector("numeric", length = ngenes)
+  gam_aic <- vector("numeric", length = ngenes)
+  pred <- vector("list", length = ngenes)
+
+  for(i in 1:nrow(Y)){
+    # fit <- gam(Y[i,] ~ s(t), family = "nb") # on raw counts
+    fit <- gam(Y[i,] ~ s(t))
+    gam_pvals[i] <- summary(fit)$s.table[4]
+    gam_rsq[i] <- summary(fit)$r.sq
+    gam_devexpl[i] <- summary(fit)$dev.expl
+    gam_aic[i] <- AIC(fit)
+    newd <- data.frame(t = seq(min(t, na.rm = TRUE), max(t, na.rm = TRUE), length.out = 100))
+    pred[[i]] <- data.frame(t = newd$t,
+                            .pred = predict(fit, newdata = newd))
+    message("Gene ", i, " of ", ngenes)
+  }
+
+  data.table(gene = rownames(Y),
+             pval = gam_pvals,
+             rsq = gam_rsq,
+             devexpl = gam_devexpl,
+             aic = gam_aic,
+             pred = pred)
 }
 
+# Fit the model
+Y <- as.matrix(logcounts(sce))
+result <- list(
+  trajectory1 = fit_gam(Y, sce$slingPseudotime_1),
+  trajectory2 = fit_gam(Y, sce$slingPseudotime_2),
+  trajectory3 = fit_gam(Y, sce$slingPseudotime_3)
+)
+result <- rbindlist(result, idcol = "trajectory")
 
-# # Fit GAM model to genes --------------------------------------------------
+
+# Write Result ------------------------------------------------------------
+message("Writing result...")
+
+outfile <- tools::file_path_sans_ext(basename(infile))
+
+saveRDS(
+  sce,
+  file = paste0("data/processed/trajectories/", outfile, "_slingshot.rds")
+)
+saveRDS(
+  tradeseq_sce,
+  file = paste0("data/processed/trajectories/", outfile, "_tradeseq.rds")
+)
+saveRDS(
+  result,
+  file = paste0("data/processed/trajectories/", outfile, "_gams.rds")
+)
+fwrite(general_test, "data/processed/trajectories/tradeseq_associationTest_overall.csv", sep = ",")
+fwrite(start_end_lineage, "data/processed/trajectories/tradeseq_startVsEndTest_lineage.csv", sep = ",")
+fwrite(end_pairwise, "data/processed/trajectories/tradeseq_diffEndTest_pairwise.csv", sep = ",")
+fwrite(pattern_pairwise, "data/processed/trajectories/tradeseq_patternTest_pairwise.csv", sep = ",")
+# fwrite(result, "data/processed/trajectories/slingshot_trajectory_gam.csv", sep = ",")
+# saveRDS(sce, "data/processed/trajectories/ring_hardfilt_slingshot.rds")
+
+
+# # Test GAM models --------------------------------------------------
 #
 # # this is essentially identical to what is implemented in tradeSeq
 # fit_gam <- function(Y, t, k = -1){
@@ -85,6 +177,7 @@ if(any(!rowData(sce)$tradeSeq$converged)){
 #   gam_rsq <- vector("numeric", length = ngenes)
 #   gam_devexpl <- vector("numeric", length = ngenes)
 #   gam_aic <- vector("numeric", length = ngenes)
+#   pred <- vector("list", length = ngenes)
 #
 #   for(i in 1:nrow(Y)){
 #     fit <- gam(Y[i,] ~ s(t, bs = "cr", k = k), family = "nb")
@@ -92,14 +185,18 @@ if(any(!rowData(sce)$tradeSeq$converged)){
 #     gam_rsq[i] <- summary(fit)$r.sq
 #     gam_devexpl[i] <- summary(fit)$dev.expl
 #     gam_aic[i] <- AIC(fit)
+#     newd <- data.frame(t = seq(min(t, na.rm = TRUE), max(t, na.rm = TRUE), length.out = 100))
+#     pred[[i]] <- data.frame(t = newd$t,
+#                             y = predict(fit, newdata = newd, type = "link")/log(10))
 #     message("Gene ", i, " of ", ngenes)
 #   }
 #
-#   data.frame(gene = rownames(Y),
+#   data.table(gene = rownames(Y),
 #              pval = gam_pvals,
 #              rsq = gam_rsq,
 #              devexpl = gam_devexpl,
-#              aic = gam_aic)
+#              aic = gam_aic,
+#              pred = pred)
 # }
 #
 # # testing optimal K - based on tradeSeq approach
@@ -123,30 +220,3 @@ if(any(!rowData(sce)$tradeSeq$converged)){
 #   geom_line(aes(group = gene)) +
 #   geom_point(stat = "summary", fun = "median", colour = "red", size = 5) +
 #   facet_wrap(~ trajectory, scales = "free")
-#
-# # # Fit the model
-# # Y <- as.matrix(counts(sce))
-# # result <- list(
-# #   trajectory1 = fit_gam(Y, sce$slingPseudotime_1),
-# #   trajectory2 = fit_gam(Y, sce$slingPseudotime_2),
-# #   trajectory3 = fit_gam(Y, sce$slingPseudotime_3)
-# # )
-# # result <- rbindlist(result, idcol = "trajectory")
-
-
-# Write Result ------------------------------------------------------------
-message("Writing result...")
-
-outfile <- tools::file_path_sans_ext(basename(infile))
-
-saveRDS(
-  sce,
-  file = paste0("data/processed/trajectories/", outfile, "_slingshot.rds")
-)
-saveRDS(
-  tradeseq_sce,
-  file = paste0("data/processed/trajectories/", outfile, "_slingshot_tradeseq.rds")
-)
-
-# fwrite(result, "data/processed/trajectories/slingshot_trajectory_gam.csv", sep = ",")
-# saveRDS(sce, "data/processed/trajectories/ring_hardfilt_slingshot.rds")
