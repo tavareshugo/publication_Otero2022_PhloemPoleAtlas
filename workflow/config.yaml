@@ -7,17 +7,53 @@ sample_sheet:
 #### samples to combine ####
 
 combine:
-  all:
-    - denyer1-1
-    - denyer1-2
-    - denyer2-1
-    - denyer2-2
+  integrated:
+    - denyer_WT_rep1
+    - denyer_WT_rep2
+    - shahan_WT_col0
+    - shahan_WT_sc1
+    - shahan_WT_sc10
+    - shahan_WT_sc11
+    - shahan_WT_sc12
+    - shahan_WT_sc20
+    - shahan_WT_sc21
+    - shahan_WT_sc30
+    - shahan_WT_sc31
+    - shahan_WT_sc37
+    - shahan_WT_sc40
+    - shahan_WT_sc51
+    - shahan_WT_sc9
+    - shahan_WT_tnw1
+    - shahan_WT_tnw2
+    - wendrich_WT_rep1
+    - wendrich_WT_rep2
+    - wendrich_WT_rep3
     - APL
     - MAKR5
     - MAKR5diff
     - PEARdel
     - S17
     - sAPL
+  leaf:
+    - kim_WT_rep1
+    - kim_WT_rep2
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
+  # all:
+  #   - denyer1-1
+  #   - denyer1-2
+  #   - denyer2-1
+  #   - denyer2-2
+  #   - APL
+  #   - MAKR5
+  #   - MAKR5diff
+  #   - PEARdel
+  #   - S17
+  #   - sAPL
   ring:
     - APL
     - MAKR5
@@ -25,11 +61,11 @@ combine:
     - PEARdel
     - S17
     - sAPL
-  denyer:
-    - denyer1-1
-    - denyer1-2
-    - denyer2-1
-    - denyer2-2
+  # denyer:
+  #   - denyer1-1
+  #   - denyer1-2
+  #   - denyer2-1
+  #   - denyer2-2
   early:
     - MAKR5
     - MAKR5diff

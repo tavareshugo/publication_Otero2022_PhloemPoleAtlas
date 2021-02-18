@@ -10,12 +10,16 @@ sample_info = pd.read_csv(config["sample_sheet"], dtype=str).set_index(["sample"
 
 rule all:
   input:
-    expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
-    #expand("data/processed/SingleCellExperimentGLM/{combo}_batches_{filt}.rds", combo = "ring", filt = config["filters"]),
-    expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"]),
+    # SingleCellExperiment object
+    expand("data/processed/SingleCellExperiment/{combo}_batches_strictfilt.rds", combo = config["combine"]),
+    #expand("data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds", combo = config["combine"], filt = config["filters"]),
+    # expand("data/intermediate/velocyto/{sample}.loom", sample = sample_info["sample"]),
     #"data/intermediate/expression_network/ring_hardfilt_network.rds",
-    "data/processed/trajectories/ring_hardfilt_slingshot.rds",
-    "data/processed/trajectories/slingshot_trajectory_gam.csv"
+
+    # slingshot outputs
+    "data/processed/trajectories/ring_batches_strictfilt_slingshot.rds",
+    "data/processed/trajectories/ring_batches_strictfilt_tradeseq.rds",
+    "data/processed/trajectories/ring_batches_strictfilt_gams.rds"
     
 
 ### fetch reference annotation
@@ -59,26 +63,41 @@ rule getPublicData:
 
 rule cellranger:
   input:
-    fq = lambda wildcards: sample_info.loc[wildcards.sample, "fastqs"],
+    fq = lambda wildcards: sample_info.loc[wildcards.sample, "fastqs"].split(","),
     idx="data/external/reference/cellranger_index"
   output:
     directory("data/intermediate/counts_cellranger/{sample}")
   params:
     cells = lambda wildcards: sample_info.loc[wildcards.sample, "cells"],
-    runtime = "12:00:00"
+    fq = lambda wildcards: sample_info.loc[wildcards.sample, "fastqs"],
+    runtime = "36:00:00"
   log:
     "logs/cellranger/{sample}.log"
   threads: 12
-  shell:
-    "(cellranger count "
-    "--id={wildcards.sample} "
-    "--transcriptome={input.idx} "
-    "--fastqs={input.fq} "
-    "--expect-cells={params.cells} "
-    "--localcores={threads} "
-    "--localmem=50 "
-    "; mv {wildcards.sample} {output}) "
-    "> {log} 2>&1"
+  # run:
+  #   fqs = ",".join(input.fq)
+  #   shell(
+  #     "(cellranger count "
+  #     "--id={wildcards.sample} "
+  #     "--transcriptome={input.idx} "
+  #     "--fastqs={fqs} "
+  #     "--expect-cells={params.cells} "
+  #     "--localcores={threads} "
+  #     "--localmem=50 "
+  #     "; mv {wildcards.sample} {output}) "
+  #     "> {log} 2>&1"
+  #   )
+  shell:"""
+    (cellranger count \
+    --id={wildcards.sample} \
+    --transcriptome={input.idx} \
+    --fastqs={params.fq} \
+    --expect-cells={params.cells} \
+    --localcores={threads} \
+    --localmem=50 \
+    ; mv {wildcards.sample} {output}) \
+    > {log} 2>&1
+    """
 
 
 ### SingleCellExperiment
@@ -93,15 +112,15 @@ rule SingleCellExperiment:
   output:
     # "data/processed/sce.rds"
     # directory("data/processed/SingleCellExperiment/{sample}")
-    rds = "data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds",
-    qc = "data/processed/SingleCellExperiment/{sample}/{sample}_qc.pdf"
+    rds = "data/intermediate/SingleCellExperiment/{sample}/{sample}_sce.rds",
+    qc = "data/intermediate/SingleCellExperiment/{sample}/{sample}_qc.pdf"
   params:
     runtime = "05:00:00"
   log:
     "logs/SingleCellExperiment/{sample}.log"
   conda:
     "envs/SingleCellExperiment.yaml"
-  threads: 12
+  threads: 32
   shell:
     "Rscript --vanilla workflow/scripts/makeSingleCellExperiment.R "
     "--cellranger {input} "
@@ -114,13 +133,13 @@ rule SingleCellExperiment:
 
 # function to fetch relevant single cell experiment files
 def getSCE(wildcards):
-  return(expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo]))
+  return(expand("data/intermediate/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo]))
 
 # combine and batch-normalise all the samples
 rule combineSingleCellExperiment:
   input:
     # getSCE
-    lambda wildcards: expand("data/processed/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo])
+    lambda wildcards: expand("data/intermediate/SingleCellExperiment/{sample}/{sample}_sce.rds", sample = config["combine"][wildcards.combo])
   output:
     "data/processed/SingleCellExperiment/{combo}_batches_{filt}.rds"
     # "data/processed/SingleCellExperiment/{files}_batches_{filt}.rds"
@@ -206,17 +225,18 @@ rule expressionNetwork:
 
 rule slingshotTrajectories:
   input:
-    "data/processed/SingleCellExperiment/ring_batches_hardfilt.rds"
+    "data/processed/SingleCellExperiment/ring_batches_strictfilt.rds"
   output:
-    "data/processed/trajectories/ring_hardfilt_slingshot.rds",
-    "data/processed/trajectories/slingshot_trajectory_gam.csv"
+    "data/processed/trajectories/ring_batches_strictfilt_slingshot.rds",
+    "data/processed/trajectories/ring_batches_strictfilt_tradeseq.rds",
+    "data/processed/trajectories/ring_batches_strictfilt_gams.rds"
   params:
-    runtime = "07:00:00"
+    runtime = "36:00:00"
   log:
     "logs/slingshot/slingshotTrajectories.log"
   conda:
     "envs/SingleCellExperiment.yaml"
-  threads: 4
+  threads: 24
   shell:
     "Rscript --vanilla workflow/scripts/fitSlingshotTrajectories.R {input} > {log} 2>&1"
 
