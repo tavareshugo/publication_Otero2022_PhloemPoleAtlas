@@ -238,13 +238,11 @@ sce <- computeSumFactors(sce,
 sce <- logNormCounts(sce)
 
 # Add mean and variance per gene to rowData
-rowData(sce)$mean_logcounts <- rowMeans(logcounts(sce))
-rowData(sce)$var_logcounts <- rowVars(as.matrix(logcounts(sce)))
-
-# variance-stabilising transform (need to filter on genes with counts for at least one cell)
-# m <- as.matrix(counts(sce))
-# colnames(m) <- colData(sce)$Barcode
-# trans <- sctransform::vst(m, min_cells = 1)
+# these sometimes error if data too large, just return NA in that case
+rowData(sce)$mean_logcounts <- tryCatch(rowMeans(logcounts(sce)),
+                                        error = function(err) NA)
+rowData(sce)$var_logcounts <- tryCatch(rowVars(as.matrix(logcounts(sce))),
+                                       error = function(err) NA)
 
 
 
