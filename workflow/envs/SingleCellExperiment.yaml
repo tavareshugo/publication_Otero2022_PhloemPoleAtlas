@@ -22,6 +22,8 @@ dependencies:
   - bioconductor-batchelor=1.4.0
   - r-sctransform=0.2
   - bioconductor-slingshot=1.6.0
+  - r-biocmanager
+  # - bioconductor-tradeseq=1.2.0
   # - bioconductor-pcatools=2.0
   # - bioconductor-zinbwave=1.8
   # - r-glmpca=0.1.0
