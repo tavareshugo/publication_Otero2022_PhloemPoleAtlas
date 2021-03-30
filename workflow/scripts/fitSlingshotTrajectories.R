@@ -67,11 +67,11 @@ pseudotime <- pseudotime[rownames(cell_weights), ]
 
 # Fit GAM models
 set.seed(7)
-tradeseq_sce <- fitGAM(counts = counts(sce[, rownames(pseudotime)]),
-                       pseudotime = pseudotime,
-                       cellWeights = cell_weights,
-                       nknots = 7,
-                       verbose = TRUE)
+tradeseq <- fitGAM(counts = counts(sce[, rownames(pseudotime)]),
+                   pseudotime = pseudotime,
+                   cellWeights = cell_weights,
+                   nknots = 7,
+                   verbose = TRUE)
 
 # sce <- fitGAM(counts = sce,
 #               nknots = 7,
@@ -153,17 +153,17 @@ saveRDS(
   file = paste0("data/processed/trajectories/", outfile, "_slingshot.rds")
 )
 saveRDS(
-  tradeseq_sce,
+  tradeseq,
   file = paste0("data/processed/trajectories/", outfile, "_tradeseq.rds")
 )
 saveRDS(
   result,
   file = paste0("data/processed/trajectories/", outfile, "_gams.rds")
 )
-fwrite(general_test, "data/processed/trajectories/tradeseq_associationTest_overall.csv", sep = ",")
-fwrite(start_end_lineage, "data/processed/trajectories/tradeseq_startVsEndTest_lineage.csv", sep = ",")
-fwrite(end_pairwise, "data/processed/trajectories/tradeseq_diffEndTest_pairwise.csv", sep = ",")
-fwrite(pattern_pairwise, "data/processed/trajectories/tradeseq_patternTest_pairwise.csv", sep = ",")
+fwrite(general_test, "data/processed/trajectories/tradeseq_associationTest.csv", sep = ",")
+fwrite(start_end_lineage, "data/processed/trajectories/tradeseq_startVsEndTest.csv", sep = ",")
+fwrite(end_pairwise, "data/processed/trajectories/tradeseq_diffEndTest.csv", sep = ",")
+fwrite(pattern_pairwise, "data/processed/trajectories/tradeseq_patternTest.csv", sep = ",")
 # fwrite(result, "data/processed/trajectories/slingshot_trajectory_gam.csv", sep = ",")
 # saveRDS(sce, "data/processed/trajectories/ring_hardfilt_slingshot.rds")
 

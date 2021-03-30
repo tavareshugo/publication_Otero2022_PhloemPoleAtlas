@@ -155,9 +155,9 @@ while (sum(before - after) > 0) {
 
 # rescale logcounts within each batch (to account for different library sizes)
 # Here we just do a simple log-normalisation
-sizeFactors(sce) <- calculateSumFactors(sce_all,
-                                        clusters = quickCluster(sce_all, BPPARAM = opt$cores),
-                                        min.mean = 0.1)
+sizeFactors(sce_all) <- calculateSumFactors(sce_all,
+                                            clusters = quickCluster(sce_all, BPPARAM = opt$cores),
+                                            min.mean = 0.1)
 sce_all <- multiBatchNorm(sce_all, batch = sce_all$Sample)
 metadata(sce_all) <- list() # reset metadata, because multiBatchNorm makes it weird
 

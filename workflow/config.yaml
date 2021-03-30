@@ -43,6 +43,18 @@ combine:
     - PEARdel
     - S17
     - sAPL
+  wendrich:
+    - denyer_WT_rep1
+    - denyer_WT_rep2
+    - wendrich_WT_rep1
+    - wendrich_WT_rep2
+    - wendrich_WT_rep3
+    - APL
+    - MAKR5
+    - MAKR5diff
+    - PEARdel
+    - S17
+    - sAPL
   # all:
   #   - denyer1-1
   #   - denyer1-2
