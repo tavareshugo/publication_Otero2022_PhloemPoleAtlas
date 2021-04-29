@@ -8,6 +8,7 @@ Created on Wed Aug 26 11:29:20 2020
 
 import scvelo as scv
 import scanpy as sc
+import pandas as pd
 
 scv.set_figure_params()
 
@@ -21,6 +22,10 @@ scv.set_figure_params()
 #adata = scv.read("data/intermediate/velocyto/ring_ppp_clusters_nocycling.loom")  
 #adata = scv.read("data/intermediate/velocyto/ring_combined_noouter.loom")
 adata = scv.read("data/intermediate/velocyto/ring_strictfilt.loom")
+
+# add umap generated in R
+umap = pd.read_csv("data/intermediate/velocyto/umap_for_scvelo.csv", index_col = 0)
+adata.obsm["X_original_umap"] = umap.to_numpy()
 
 
 #### Calculate velocities ####
@@ -46,6 +51,7 @@ scv.tl.umap(adata)
 
 # project arrows on embedding
 scv.tl.velocity_embedding(adata, basis = 'umap')
+scv.tl.velocity_embedding(adata, basis = 'original_umap')
 
 # clustering
 sc.tl.louvain(adata)
@@ -78,6 +84,7 @@ adata.uns['cluster_mnn_logvst_colors'] = tableau_pallete
 
 # figure for paper
 scv.pl.velocity_embedding_stream(adata, basis='umap', color = 'cluster_mnn_logvst', title = "")
+scv.pl.velocity_embedding_stream(adata, basis='original_umap', color = 'cluster_mnn_logvst', title = "")
 
 
 # project on embedding

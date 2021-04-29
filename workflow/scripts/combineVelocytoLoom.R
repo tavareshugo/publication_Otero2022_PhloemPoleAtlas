@@ -28,7 +28,7 @@ colnames(looms) <- looms$CellID
 # Filter ------------------------------------------------------------------
 
 # read filtered sce object
-ring_sce <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
+# ring_sce <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
 ring_sce <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
 
 # check intersection between these two objects
@@ -44,6 +44,12 @@ looms$cluster_mnn_logvst <- ring_sce$cluster_mnn_logvst
 
 # save all cells
 export(looms, "data/intermediate/velocyto/ring_strictfilt.loom")
+
+# export UMAP (to project velocities on)
+x <- reducedDim(ring_sce, "UMAP30_MNN_logvst")
+colnames(x) <- c("UMAP1", "UMAP2")
+write.csv(x, "data/intermediate/velocyto/umap_for_scvelo.csv")
+
 
 # # filter to retain only the initially determined 1000 HGVs
 # export(looms[which(rowData(looms)$Accession %in% metadata(ring_sce)$hvgs), ],

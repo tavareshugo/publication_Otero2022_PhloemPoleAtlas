@@ -69,7 +69,7 @@ getReducedDim <- function(x, type = "UMAP", colData = TRUE, genes = NULL,
 #' this is a ggplot2 extension that calculates centroids of x and y aesthetics
 StatCentroid <- ggplot2::ggproto("StatCentroid", Stat,
                                  compute_group = function(data, scales) {
-                                   data.frame(x = mean(data$x), y = mean(data$y))
+                                   data.frame(x = median(data$x), y = median(data$y))
                                  },
 
                                  required_aes = c("x", "y")
