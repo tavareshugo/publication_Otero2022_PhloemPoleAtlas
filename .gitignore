@@ -3,6 +3,7 @@
 !analysis
 !analysis/*
 !analysis/functions/*
+!analysis/figures/*
 !workflow
 !workflow/*
 !workflow/envs/*
