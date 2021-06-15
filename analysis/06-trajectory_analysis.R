@@ -107,6 +107,44 @@ sling %>%
   labs(x = "Cluster", y = "%", fill = "Trajectory")
 
 
+# Probability assignment --------------------------------------------------
+
+cell_weights <- slingCurveWeights(SlingshotDataSet(sling), as.probs = TRUE)
+cell_trajs <- tibble(
+  cell = colnames(sling),
+  trajectory = colnames(cell_weights)[max.col(cell_weights)]
+)
+
+cell_weights %>%
+  as_tibble(rownames = "cell") %>%
+  full_join(sling %>% colData() %>% as_tibble(rownames = "cell"),
+            by = "cell") %>%
+  select(matches("curve"), cluster_mnn_logvst) %>%
+  pivot_longer(matches("curve")) %>%
+  mutate(name = str_replace(name, "curve", "Trajectory ")) %>%
+  ggplot(aes(value)) +
+  geom_density(aes(colour = name)) +
+  # facet_wrap(~ cluster_mnn_logvst, scales = "free") +
+  facet_grid(cluster_mnn_logvst ~ name, scales = "free") +
+  scale_colour_brewer(palette = "Dark2")
+
+cell_weights %>%
+  as_tibble(rownames = "cell") %>%
+  full_join(sling %>% colData() %>% as_tibble(rownames = "cell"),
+            by = "cell") %>%
+  select(matches("curve"), cluster_mnn_logvst) %>%
+  pivot_longer(matches("curve")) %>%
+  mutate(name = str_replace(name, "curve", "Trajectory ")) %>%
+  filter(cluster_mnn_logvst %in% c(3, 4, 5, 8)) %>%
+  ggplot(aes(value)) +
+  geom_density(aes(colour = name)) +
+  facet_wrap(~ cluster_mnn_logvst, scales = "free_y", nrow = 1) +
+  # facet_grid(cluster_mnn_logvst ~ name, scales = "free") +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(x = "Probability of Cell Assigned to Trajectory", y = "") +
+  theme(axis.text.y = element_blank())
+
+
 # Genes with differential patterns ----------------------------------------
 
 # score based on association with any trajectory

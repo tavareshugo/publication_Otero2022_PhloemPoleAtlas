@@ -7,34 +7,37 @@ theme_set(theme_bw() + theme(text = element_text(size = 14)))
 
 # source custom functions
 source("analysis/functions/utils.R")
+source("analysis/functions/plots.R")
 
 
 # Read data ---------------------------------------------------------------
 
 # sce object
-ring <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
-all <- readRDS("data/processed/SingleCellExperiment/all_batches_hardfilt.rds")
+ring <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
+all <- readRDS("data/processed/SingleCellExperiment/all_batches_strictfilt.rds")
 
 # get wilcox test results for each cluster
-cluster_test <- read_csv("data/processed/gene_sets/ring_hardfilt_cluster_markers.csv",
-                         guess_max = Inf) %>%
+cluster_test <- vroom::vroom("data/processed/gene_sets/ring_batches_strictfilt_cluster_markers_8in15.csv") %>%
   mutate(cluster = factor(cluster))
 
 # inferred cluster annotation - empirically determined based on markers and curated genes
 cluster_annot <- tribble(
   ~cluster, ~type,
-  "1", "PPP",
-  "2", "Unknown",
-  "3", "Unknown",
+  "1", "MSE?",
+  "2", "PSE",
+  "3", "CC",
   "4", "PPP",
-  "5", "SE",
-  "6", "Cycling",
-  "7", "Unknown",
+  "5", "CC",
+  "6", "PSE",
+  "7", "PPP",
   "8", "Unknown",
-  "9", "Cycling",
+  "9", "Unknown",
   "10", "Unknown",
-  "11", "Outer Layers",
-  "12", "CC"
+  "11", "PPP",
+  "12", "PSE (early)",
+  "13", "Cycling",
+  "14", "PPP",
+  "15", "Outer Layers"
 )
 
 # make transcription factor list for convenience
@@ -64,14 +67,14 @@ temp <- cluster_test %>%
 upset(fromList(temp), order.by = "freq", nsets = 12)
 
 
-# Cluster 12 markers ----------------------------------------------------
+# CC clusters ----------------------------------------------------
 
-# focus on cluster 12 (presumed CC)
+# focus on cluster 3 (presumed CC)
 interesting_genes <- cluster_test %>%
-  # focus on cluster 12
-  filter(cluster == 12) %>%
+  # focus on cluster 3
+  filter(cluster == 3) %>%
   # false discovery < 5% and average AUC of 70%
-  filter(FDR < 0.05 & summary.AUC > 0.9) %>%
+  filter(FDR < 0.05 & summary.AUC > 0.8) %>%
   # get gene ids
   arrange(desc(summary.AUC)) %>%
   pull(id) %>% unique()
@@ -83,8 +86,8 @@ interesting_genes <- cluster_test %>%
   # for each gene
   group_by(id) %>%
   # retain genes that are significant in only some clusters
-  filter(n_distinct(cluster) == 1 &
-           cluster %in% c(12)) %>%
+  filter(n_distinct(cluster) == 2 &
+           cluster %in% c(3, 5)) %>%
   ungroup() %>%
   # filter AUC threshold for better signal
   filter(summary.AUC > 0.7) %>%
@@ -96,7 +99,7 @@ interesting_genes <- cluster_test %>%
 
 # violin plots of expression
 plotExpression(ring,
-               features = unique(c(interesting_genes, "AT1G22710", "AT5G02600")),
+               features = unique(c(interesting_genes[1:8], "AT1G22710", "AT5G02600")),
                x = "cluster_mnn_logvst", "logcounts")
 
 # visualise with the Denyer dataset
@@ -118,11 +121,11 @@ all %>%
        colour = "Cluster-weighted\nNormalised\nExpression")
 
 
-# focus on cluster 12 but ensuring genes distinguish from clusters
-# 1 & 4 (presumed PPP) and 5 (presumed SE)
+# focus on cluster 3 but ensuring genes distinguish from clusters
+# 14 & 4 (presumed PPP) and 6 (presumed SE)
 interesting_genes <- cluster_test %>%
-  filter(cluster == 12 & FDR < 0.05) %>%
-  filter(AUC.1 > 0.7 & AUC.4 > 0.7 & AUC.5 > 0.7) %>%
+  filter(cluster == 3 & FDR < 0.05) %>%
+  filter(AUC.14 > 0.7 & AUC.4 > 0.7 & AUC.6 > 0.7) %>%
   pull(id)
 
 plotExpression(object = ring,
@@ -140,7 +143,7 @@ cyclins <- rownames(ring)[grepl("CYC[A,B,D]",
                                 rowData(ring)$alternative_name,
                                 ignore.case = TRUE)]
 
-# cluster 2, 8, 9
+# cluster 13, 8, 9
 interesting_genes <- cluster_test %>%
   # FDR threshold
   filter(FDR < 0.05) %>%
@@ -148,7 +151,7 @@ interesting_genes <- cluster_test %>%
   group_by(id) %>%
   # retain genes that are significant in only certain clusters
   filter(n_distinct(cluster) == 3 &
-           all(cluster %in% c(2, 8, 9))) %>%
+           all(cluster %in% c(13, 8, 9))) %>%
   ungroup() %>%
   # filter AUC threshold for better signal
   filter(summary.AUC > 0.8) %>%
@@ -160,9 +163,9 @@ interesting_genes <- cluster_test %>%
 # none of these are cyclins
 sum(interesting_genes %in% cyclins)
 
-# plot the first 8 of those genes
+# plot
 plotExpression(object = ring,
-               features = c(interesting_genes[1:8], curated_early),
+               features = c(interesting_genes, curated_early),
                x = "cluster_mnn_logvst", "logcounts")
 
 # visualise with the Denyer dataset
@@ -185,6 +188,8 @@ all %>%
 
 
 # PPP clusters -----------------------------------------------------------
+
+##### !!! CLUSTERS ARE OUTDATED FROM HERE ON #####
 
 # focus on clusters 1 & 4
 interesting_genes <- cluster_test %>%
