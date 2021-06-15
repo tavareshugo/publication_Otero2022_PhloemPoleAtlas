@@ -166,39 +166,39 @@ dev.off()
 
 # p-values ----------------------------------------------------------------
 
-ring_genes <- ring_genes %>%
-  left_join(gene_module_assignment, by="gene")
-write.csv(ring_genes,"data/processed/network/ring_genes_0610.csv")
+# ring_genes <- ring_genes %>%
+#   left_join(gene_module_assignment, by="gene")
+# write.csv(ring_genes,"data/processed/network/ring_genes_0610.csv")
 
 message("Number of ring genes in Module 1 is ",sum(ring_genes$module=="M1",na.rm=TRUE))
 message("Number of ring genes in sub-module 1 is ",sum(ring_genes$sub_module=="M1.1",na.rm=TRUE))
 
 # 8 ring genes fall in Module 1
 #total genes in network
-N=sum(module_summary$number_genes);
+N <- sum(module_summary$number_genes);
 # module 1 size
-m=module_summary[1,"number_genes"];
-n=N-m;
+m <- module_summary %>% filter(module == "M1") %>% pull(number_genes)
+n <- N - m
 # ring genes in network
-k=nrow(ring_genes);
+k <- sum(!is.na(ring_genes$module))
 # observed in Module1
-x=sum(ring_genes$module=="M1",na.rm=TRUE);
+x <- sum(ring_genes$module=="M1",na.rm=TRUE);
 
-# Probability for 8 or more out of 10 ring genes observed in Module 1
-p=phyper(x-1,m,n,k,lower.tail = FALSE)
+# Probability for 8 or more out of 9 ring genes observed in Module 1
+p <- phyper(x-1,m,n,k,lower.tail = FALSE)
 
 
 # 7 ring genes fall in sub-module 1 of Module 1
 #total genes in Module 1
-N1=module_summary[1,"number_genes"];
+N1 <- module_summary %>% filter(module == "M1") %>% pull(number_genes)
 # module 1 sub-module 1
-m1=sum(gene_module_assignment$sub_module=="M1.1",na.rm = TRUE);
-n1=N1-m1;
+m1 <- sum(gene_module_assignment$sub_module=="M1.1",na.rm = TRUE)
+n1 <- N1-m1
 # ring genes in Module 1
-k1=sum(ring_genes$module=="M1",na.rm=TRUE);
+k1 <- sum(ring_genes$module=="M1", na.rm=TRUE)
 # observed ring genes in module 1 sub 3
-x1=sum(ring_genes$sub_module=="M1.1",na.rm=TRUE);
+x1 <- sum(ring_genes$sub_module=="M1.1",na.rm=TRUE)
 
-# Probability for 7 out of 8 ring genes observed in sub-module 3
-p1=phyper(x1-1,m1,n1,k1,lower.tail = FALSE)
+# Probability for 7 or more out of 8 ring genes observed in sub-module 1
+p1 <- phyper(x1-1,m1,n1,k1,lower.tail = FALSE)
 
