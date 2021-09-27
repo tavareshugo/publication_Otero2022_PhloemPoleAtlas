@@ -1,29 +1,30 @@
 library(scater)
 library(tidyverse)
 library(rgl)
+options(rgl.printRglwidget = TRUE)
 
 # source util functions
 source("analysis/functions/utils.R")
 
-ring_hard <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
+ring <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
 
 
 # 3D UMAP -----------------------------------------------------------------
 
 # UMAP with 3 dimensions
-reducedDim(ring_hard, "temp") <-
-  calculateUMAP(ring_hard,
+reducedDim(ring, "temp") <-
+  calculateUMAP(ring,
                 ncomponents = 3,
                 dimred = "MNN_logvst",
                 n_neighbors = 30)
 
 # get the data to a tidy table
-temp <- getReducedDim(ring_hard, "temp")
+temp <- getReducedDim(ring, "temp")
 
 # add colours to a column
 temp$col <- ggthemes::tableau_color_pal("Tableau 20")(length(unique(temp$cluster_mnn_logvst)))[as.numeric(as.factor(temp$cluster_mnn_logvst))]
 
-rm(ring_hard); gc()
+rm(ring); gc()
 
 # Static chart
 plot3d(temp$V1, temp$V2, -temp$V3,
@@ -77,7 +78,7 @@ curated_genes <- list(`Outer Layers` = tribble(~id, ~name,
 
 
 # plot data
-pdata <- getReducedDim(ring_hard, "UMAP30_MNN_logvst",
+pdata <- getReducedDim(ring, "UMAP30_MNN_logvst",
                        genes = curated_genes$id, melted = TRUE,
                        exprs_values = "logvst") %>%
   left_join(curated_genes, by = "id") %>%
@@ -90,7 +91,7 @@ p <- pdata %>%
   group_by(name) %>%
   mutate(expr_weighted = expr_weighted/max(expr_weighted, na.rm = TRUE)) %>%
   ggplot(aes(V1, V2)) +
-  geom_point(data = getReducedDim(ring_hard, "UMAP30_MNN_logvst"),
+  geom_point(data = getReducedDim(ring, "UMAP30_MNN_logvst"),
              colour = "lightgrey") +
   geom_point(aes(colour = expr_weighted)) +
   facet_wrap( ~ name) +
