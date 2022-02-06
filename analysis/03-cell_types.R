@@ -4,6 +4,7 @@ library(scran)
 library(batchelor)
 library(ggplot2)
 library(patchwork)
+library(tidyverse)
 
 # set seed for reproducible results
 set.seed(1001)
@@ -18,6 +19,7 @@ source("analysis/functions/utils.R")
 # Read data ---------------------------------------------------------------
 
 # ring data both soft and hard filtered
+ring <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
 ring_soft <- readRDS("data/processed/SingleCellExperiment/ring_batches_softfilt.rds")
 ring_hard <- readRDS("data/processed/SingleCellExperiment/ring_batches_hardfilt.rds")
 
@@ -96,6 +98,63 @@ ggplot(merge(markers, cyclins, by.x = "id", by.y = "ID"),
   scale_fill_gradient(low = "brown", high = "lightgrey", limits = c(0, 1)) +
   labs(x = "Cluster", y = "Gene")
 
+
+
+# Cluster 12 --------------------------------------------------------------
+
+# This cluster seems to have mixed cell-cycle and PSE identity
+# investigate if the same cells express genes from both
+ring |>
+  getReducedDim("UMAP30_MNN_logvst",
+                genes = c("AT1G05470", "AT2G37590", "AT1G08560",
+                          "AT4G32830", "AT4G37490")) |>
+  arrange(!is.na(expr)) |>
+  ggplot(aes(V1, V2)) +
+  geom_point(aes(colour = expr)) +
+  facet_wrap(~ id) +
+  theme_void() +
+  coord_equal() +
+  scale_colour_viridis_c()
+
+target_genes <- c(
+  CVP2 = "AT1G05470",
+  PEAR1 = "AT2G37590",
+  CALS7 = "AT1G06490",
+  NAC086 = "AT5G17260",
+  NAC045 = "AT3G03200",
+  KNOLLE = "AT1G08560",
+  AUR1 = "AT4G32830",
+  CYCB1 = "AT4G37490"
+)
+
+cluster12 <- logcounts(ring[target_genes, ring$cluster_mnn_logvst == 12])
+
+mean(colSums(cluster12[target_genes[c("KNOLLE", "AUR1", "CYCB1")], , drop = FALSE]) > 0)
+sum(colSums(cluster12[target_genes[c("PEAR1")], , drop = FALSE]) > 0)
+
+
+out <- tibble()
+for (i in rownames(cluster12)) {
+  for (j in rownames(cluster12)) {
+    if (i == j) next
+    out <- bind_rows(
+      out,
+      tibble(gene1 = i,
+             gene2 = j,
+             gene1_n = sum(cluster12[i, ] > 0),
+             gene2_n = sum(cluster12[j, ] > 0),
+             pct = mean(cluster12[i, ] > 0 & cluster12[j, ] > 0))
+    )
+  }
+}
+out |>
+  ggplot(aes(gene1, gene2)) +
+  geom_label(aes(label = round(pct * 100, 1), size = pct))
+
+out |>
+  filter(gene1 == "AT4G32830")
+
+ncol(cluster12)
 
 # Cell type annotations ---------------------------------------------------
 
