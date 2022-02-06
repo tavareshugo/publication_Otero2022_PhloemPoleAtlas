@@ -53,7 +53,7 @@ integrated$source <- ifelse(grepl("wendrich_", integrated$Sample),
                      "Wendrich et al.",
                      ifelse(grepl("shahan_", integrated$Sample), "Shahan et al.",
                             ifelse(grepl("denyer_", integrated$Sample), "Denyer et al.",
-                                   "Ours")))
+                                   "Phloem Pole Atlas")))
 
 # list of curated genes
 curated_genes <- read_csv("data/raw/signature_genes_circle_plot.csv") %>%
@@ -62,6 +62,13 @@ curated_genes <- read_csv("data/raw/signature_genes_circle_plot.csv") %>%
   mutate(tissue = str_replace_all(tissue, " ", "\n")) %>%
   mutate(id = toupper(str_trim(id)))
 
+# get original clusters
+ring <- readRDS("data/processed/SingleCellExperiment/ring_batches_strictfilt.rds")
+
+original_clusters <- ring %>%
+  colData() %>%
+  as_tibble(rownames = "cell_id") %>%
+  select(cell_id, original_clusters = cluster_mnn_logvst)
 
 
 # EDA ---------------------------------------------------------------------
@@ -226,6 +233,66 @@ integrated %>%
         strip.background = element_rect(colour = NA, fill = NA),
         axis.text.x = element_text(angle = 45, hjust = 1))
 dev.off()
+
+
+# Shahan Labels ---------------------
+
+tmp_file <- tempfile()
+download.file("https://www.biorxiv.org/content/biorxiv/early/2020/06/30/2020.06.29.178863/DC7/embed/media-7.xlsx?download=true",
+              tmp_file)
+
+shahan_cell_annot <- readxl::read_excel(tmp_file,
+                                        sheet = "Metadata",
+                                        skip = 2)
+
+# make cell ids same as ours
+shahan_cell_annot <- shahan_cell_annot %>%
+  mutate(cell_id = orig.ident %>%
+           str_remove("_at$") %>%
+           str_remove("_"),
+         Cell_Barcode = Cell_Barcode %>%
+           str_replace("_.*", "-1")) %>%
+  mutate(prefix = paste("shahan_WT",
+                         cell_id,
+                         sep = "_")) %>%
+  mutate(cell_id = paste(prefix, Cell_Barcode, sep = "_"))
+
+# plot coloured by original clusters
+p1 <- integrated %>%
+  getReducedDim("UMAP30_MNN_logvst") %>%
+  mutate(cell_id = paste(Sample, Barcode, sep = "_")) %>%
+  left_join(original_clusters, by = "cell_id") %>%
+  arrange(!is.na(original_clusters)) %>%
+  ggplot(aes(V1, V2)) +
+  geom_point(aes(colour = factor(original_clusters)),
+             size = 0.5) +
+  ggthemes::scale_colour_tableau("Tableau 20",
+                                 na.value = "black") +
+  coord_equal() + theme_void() +
+  labs(colour = "Phloem Pole Atlas\nCluster") +
+  guides(colour = guide_legend(override.aes = list(size=2)))
+
+# colour by shahan annotation
+p2 <- integrated %>%
+  getReducedDim("UMAP30_MNN_logvst") %>%
+  mutate(cell_id = paste(Sample, Barcode, sep = "_")) %>%
+  left_join(shahan_cell_annot, by = "cell_id") %>%
+  arrange(!is.na(celltype.anno), cell_id) %>%
+  ggplot(aes(V1, V2)) +
+  geom_point(aes(colour = celltype.anno),
+             size = 0.5) +
+  ggthemes::scale_colour_tableau("Tableau 20",
+                                 na.value = "black") +
+  coord_equal() + theme_void() +
+  labs(colour = "Shahan et al.\nannotation") +
+  guides(colour = guide_legend(override.aes = list(size=2)))
+
+
+png("documents/pdf for figures/integrated_datasets/umap_colour_shahan_annotation.png",
+    width = 7.5, height = 12, units = "in", res = 300)
+p1 / p2
+dev.off()
+
 
 
 # Highlight clusters ---------------------------------------------------
