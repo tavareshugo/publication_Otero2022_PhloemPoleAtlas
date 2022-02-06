@@ -15,7 +15,7 @@ source("analysis/functions/utils.R")
 leaf <- readRDS("data/processed/SingleCellExperiment/leaf_batches_strictfilt.rds")
 
 leaf$source <- ifelse(grepl("kim_", leaf$Sample),
-                      "Leaf\n(Kim et al.)", "Root ring\n(ours)")
+                      "Leaf\n(Kim et al.)", "Phloem Pole Atlas")
 
 # list of curated genes
 curated_genes_leaf <- read_csv("data/raw/signature_genes_leaf.csv") %>%
@@ -83,7 +83,7 @@ leaf %>%
              stat = "centroid",
              aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.8, label.padding = unit(0.1, "lines")) +
-  scale_colour_manual(values = c("seagreen3", "steelblue")) +
+  scale_colour_manual(values = c("seagreen3", "black")) +
   labs(x = "UMAP1", y = "UMAP2",
        colour = "source") +
   coord_equal() + theme_void() +
@@ -100,7 +100,7 @@ p1 <- leaf %>%
   geom_label(stat = "centroid",
              aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
              alpha = 0.8, label.padding = unit(0.1, "lines"), size = 3) +
-  scale_colour_manual(values = c("seagreen3", "steelblue")) +
+  scale_colour_manual(values = c("seagreen3", "black")) +
   labs(x = "UMAP1", y = "UMAP2",
        colour = "source") +
   coord_equal() + theme_void() +
@@ -125,7 +125,7 @@ p2 <- leaf %>%
   mutate(cluster = fct_reorder(cluster, as.numeric(cluster_mnn_logvst))) %>%
   ggplot(aes(cluster, pct)) +
   geom_col(aes(fill = source)) +
-  scale_fill_manual(values = c("seagreen3", "steelblue")) +
+  scale_fill_manual(values = c("seagreen3", "black")) +
   labs(x = "Cluster", y = "% cells")
 
 pdf("documents/pdf for figures/integrated_leaf/pct_cells_per_cluster.pdf",
@@ -360,8 +360,8 @@ leaf %>%
             vjust = 0) +
   ggbeeswarm::geom_quasirandom(aes(colour = source), size = 0.8) +
   facet_wrap(~ name, nrow = 2, scales = "free_x") +
-  scale_fill_manual(values = c("seagreen3", "steelblue")) +
-  scale_colour_manual(values = c("seagreen3", "steelblue")) +
+  scale_fill_manual(values = c("seagreen3", "black")) +
+  scale_colour_manual(values = c("seagreen3", "black")) +
   scale_y_continuous(breaks = seq(0, 9, by = 3)) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -407,8 +407,8 @@ p1 <- leaf %>%
             vjust = 0) +
   ggbeeswarm::geom_quasirandom(aes(colour = source), size = 0.8) +
   facet_grid(~ name) +
-  scale_fill_manual(values = c("seagreen3", "steelblue")) +
-  scale_colour_manual(values = c("seagreen3", "steelblue")) +
+  scale_fill_manual(values = c("seagreen3", "black")) +
+  scale_colour_manual(values = c("seagreen3", "black")) +
   scale_y_continuous(breaks = seq(0, 9, by = 3)) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
@@ -445,7 +445,7 @@ leaf %>%
   ggplot(aes(pct_expressing, factor(cluster_mnn_logvst))) +
   geom_col(aes(fill = source)) +
   facet_grid(~ name) +
-  scale_fill_manual(values = c("seagreen3", "steelblue")) +
+  scale_fill_manual(values = c("seagreen3", "black")) +
   theme_minimal() +
   labs(x = "% Cells with detected expression (per cluster)",
        y = "Cluster (LEAF + RING)")
@@ -671,7 +671,7 @@ clust6_graph <- induced_subgraph(graph, V(graph)[clusters == 6])
 temp <- delete_edges(clust6_graph, E(clust6_graph)[E(clust6_graph)$weight < 0.3])
 plot(temp,
      edge.color = "grey",
-     vertex.color = c("seagreen3", "steelblue")[(V(temp)$source == "Leaf") + 1],
+     vertex.color = c("seagreen3", "black")[(V(temp)$source == "Leaf") + 1],
      vertex.label = NA,
      vertex.size = 5)
 
