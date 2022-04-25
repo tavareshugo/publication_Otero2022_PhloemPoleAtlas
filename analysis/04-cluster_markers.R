@@ -102,24 +102,6 @@ plotExpression(ring,
                features = unique(c(interesting_genes[1:8], "AT1G22710", "AT5G02600")),
                x = "cluster_mnn_logvst", "logcounts")
 
-# visualise with the Denyer dataset
-all %>%
-  getReducedDim("UMAP30_MNN_logvst",
-                genes = interesting_genes, melted = TRUE,
-                exprs_values = "logvst") %>%
-  arrange(!is.na(expr)) %>%
-  group_by(cluster_mnn_logvst, id) %>%
-  mutate(expr_weighted = expr * (sum(!is.na(expr))/n())) %>%
-  ggplot(aes(V1, V2)) +
-  geom_point(aes(colour = expr_weighted)) +
-  geom_label(stat = "centroid",
-             aes(group = cluster_mnn_logvst, label = cluster_mnn_logvst),
-             alpha = 0.8, label.padding = unit(0.1, "lines")) +
-  facet_wrap(~ id) +
-  scale_colour_viridis_c(na.value = "lightgrey") +
-  labs(x = "UMAP1", y = "UMAP2",
-       colour = "Cluster-weighted\nNormalised\nExpression")
-
 
 # focus on cluster 3 but ensuring genes distinguish from clusters
 # 14 & 4 (presumed PPP) and 6 (presumed SE)
@@ -185,6 +167,25 @@ all %>%
   scale_colour_viridis_c(na.value = "lightgrey") +
   labs(x = "UMAP1", y = "UMAP2",
        colour = "Cluster-weighted\nNormalised\nExpression")
+
+
+
+# AHA3 correlation --------------------------------------------------------
+
+# AHA3 has significant high expression in cluster 3 (CC)
+cluster_test |> filter(id == "AT5G57350" & FDR < 0.01)
+
+# we want to find genes with high correlation to AHA3
+aha3_cor <- cor(t(as.matrix(assay(ring["AT5G57350", , drop = FALSE], "logvst"))),
+              t(as.matrix(assay(ring, "logvst"))))
+
+rank(-aha3_cor[1, ])[c("AT2G32210", "AT5G64240", "AT5G58690", "AT2G38640")]
+aha3_cor[1, ][c("AT2G32210", "AT5G64240", "AT5G58690")]
+sort(aha3_cor[1, ], decreasing = TRUE)[1:10]
+
+cluster_test |>
+  filter(id %in% c("AT5G57350", "AT2G32210", "AT5G64240", "AT5G58690", "AT2G38640") & FDR < 0.01)
+
 
 
 # PPP clusters -----------------------------------------------------------

@@ -59,7 +59,7 @@ met %>%
   scale_x_log10() + scale_y_log10()
 
 
-# Fit model - no sucrose ------------------------------------------------
+# Fit full model ------------------------------------------------
 
 # fit hierarchical model accounting for sample variation
 fit <- lmer(log2(peak_area) ~ genotype*dps*metabolite*tissue*condition + (1|sample),
@@ -253,7 +253,7 @@ fit_contrasts %>%
   distinct(tissue, metabolite)
 
 
-# Fit model - no sucrose ------------------------------------------------
+# Fit model - sucrose ------------------------------------------------
 
 # fit hierarchical model accounting for sample variation
 fit <- lmer(log2(peak_area) ~ genotype*dps*metabolite*tissue + (1|sample),
