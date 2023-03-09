@@ -1,6 +1,6 @@
 # Code for analysis of scRNA-seq data of phloem ring
 
-The file structure is as follows:
+Assuming full pipeline is run, the file structure is as follows:
 
 - `data`: contains all the data needed for the project
   - `raw`: the raw data files. This should be shared in public repositories upon publication.
@@ -14,6 +14,8 @@ The file structure is as follows:
   - `envs`: contain _YAML_ files with the conda environment for each step of the pipeline.
 - `notebooks`: contains RMarkdown or other scripts that were used for exploratory analysis of the data. These are meant to be run interactively.
 
+For a quick look at our data, you can download an RDS file with the filtered `SingleCellExperiment` object from here:
+https://drive.google.com/file/d/17Wq19nCTcWGJ_lcu08j-UzowobwZDLxC/view?usp=share_link
 
 ## (re-)Running the pipeline
 
