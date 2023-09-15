@@ -1,4 +1,6 @@
 *
+!public_datasets.csv
+!sample_info.csv
 !.gitignore
 !analysis
 !analysis/*

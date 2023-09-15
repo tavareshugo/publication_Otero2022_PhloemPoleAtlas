@@ -1,0 +1,33 @@
+fastqs,sample,cells,comments
+data/raw/reads/01-MAKR5/,MAKR5,2000,expected cells is approximate (not know)
+data/raw/reads/02-MAKR5diff/,MAKR5diff,7722,
+data/raw/reads/03-PEARdel/,PEARdel,3502,
+data/raw/reads/04-S17/,S17,4000,
+data/raw/reads/05-APL/,APL,15000,
+data/raw/reads/06-sAPL/,sAPL,1000,
+data/external/denyer2019/rep1/sample_ara_col_2367_MissingLibrary_1_HFHN2BGX7,denyer1-1,5000,from Denyer et al 2019
+data/external/denyer2019/rep1/sample_ara_col_2367_MissingLibrary_1_HNV5MAFXX,denyer1-2,5000,from Denyer et al 2019
+data/external/denyer2019/rep2/sample_ara_MIR166_2360_MissingLibrary_1_HFHN2BGX7,denyer2-1,5000,from Denyer et al 2019
+data/external/denyer2019/rep2/sample_ara_MIR166_2360_MissingLibrary_1_HNV5MAFXX,denyer2-2,5000,from Denyer et al 2019
+data/external/denyer/WT_rep1/run1,denyer_WT_rep1,5000,
+data/external/denyer/WT_rep2/run1,denyer_WT_rep2,5000,
+"data/external/kim/WT_rep1/run1,data/external/kim/WT_rep1/run2,data/external/kim/WT_rep1/run3,data/external/kim/WT_rep1/run4,data/external/kim/WT_rep1/run5,data/external/kim/WT_rep1/run6,data/external/kim/WT_rep1/run7,data/external/kim/WT_rep1/run8",kim_WT_rep1,5000,
+"data/external/kim/WT_rep2/run1,data/external/kim/WT_rep2/run2,data/external/kim/WT_rep2/run3,data/external/kim/WT_rep2/run4,data/external/kim/WT_rep2/run5,data/external/kim/WT_rep2/run6,data/external/kim/WT_rep2/run7,data/external/kim/WT_rep2/run8",kim_WT_rep2,5000,
+"data/external/shahan/WT_col0/run1,data/external/shahan/WT_col0/run2",shahan_WT_col0,5000,
+"data/external/shahan/WT_sc1/run1,data/external/shahan/WT_sc1/run2",shahan_WT_sc1,5000,
+"data/external/shahan/WT_sc10/run1,data/external/shahan/WT_sc10/run2",shahan_WT_sc10,5000,
+"data/external/shahan/WT_sc11/run1,data/external/shahan/WT_sc11/run2",shahan_WT_sc11,5000,
+"data/external/shahan/WT_sc12/run1,data/external/shahan/WT_sc12/run2,data/external/shahan/WT_sc12/run3,data/external/shahan/WT_sc12/run4",shahan_WT_sc12,5000,
+"data/external/shahan/WT_sc20/run1,data/external/shahan/WT_sc20/run2",shahan_WT_sc20,5000,
+"data/external/shahan/WT_sc21/run1,data/external/shahan/WT_sc21/run2",shahan_WT_sc21,5000,
+"data/external/shahan/WT_sc30/run1,data/external/shahan/WT_sc30/run2,data/external/shahan/WT_sc30/run3,data/external/shahan/WT_sc30/run4,data/external/shahan/WT_sc30/run5,data/external/shahan/WT_sc30/run6,data/external/shahan/WT_sc30/run7,data/external/shahan/WT_sc30/run8",shahan_WT_sc30,5000,
+"data/external/shahan/WT_sc31/run1,data/external/shahan/WT_sc31/run2,data/external/shahan/WT_sc31/run3,data/external/shahan/WT_sc31/run4,data/external/shahan/WT_sc31/run5,data/external/shahan/WT_sc31/run6,data/external/shahan/WT_sc31/run7,data/external/shahan/WT_sc31/run8",shahan_WT_sc31,5000,
+"data/external/shahan/WT_sc37/run1,data/external/shahan/WT_sc37/run2,data/external/shahan/WT_sc37/run3,data/external/shahan/WT_sc37/run4,data/external/shahan/WT_sc37/run5,data/external/shahan/WT_sc37/run6,data/external/shahan/WT_sc37/run7,data/external/shahan/WT_sc37/run8",shahan_WT_sc37,5000,
+"data/external/shahan/WT_sc40/run1,data/external/shahan/WT_sc40/run2,data/external/shahan/WT_sc40/run3,data/external/shahan/WT_sc40/run4,data/external/shahan/WT_sc40/run5,data/external/shahan/WT_sc40/run6,data/external/shahan/WT_sc40/run7,data/external/shahan/WT_sc40/run8",shahan_WT_sc40,5000,
+"data/external/shahan/WT_sc51/run1,data/external/shahan/WT_sc51/run2,data/external/shahan/WT_sc51/run3,data/external/shahan/WT_sc51/run4",shahan_WT_sc51,5000,
+"data/external/shahan/WT_sc9/run1,data/external/shahan/WT_sc9/run2",shahan_WT_sc9,5000,
+"data/external/shahan/WT_tnw1/run1,data/external/shahan/WT_tnw1/run2",shahan_WT_tnw1,5000,
+"data/external/shahan/WT_tnw2/run1,data/external/shahan/WT_tnw2/run2",shahan_WT_tnw2,5000,
+"data/external/wendrich/WT_rep1/run1,data/external/wendrich/WT_rep1/run2,data/external/wendrich/WT_rep1/run3,data/external/wendrich/WT_rep1/run4",wendrich_WT_rep1,5000,
+"data/external/wendrich/WT_rep2/run1,data/external/wendrich/WT_rep2/run2,data/external/wendrich/WT_rep2/run3,data/external/wendrich/WT_rep2/run4",wendrich_WT_rep2,5000,
+"data/external/wendrich/WT_rep3/run1,data/external/wendrich/WT_rep3/run2,data/external/wendrich/WT_rep3/run3,data/external/wendrich/WT_rep3/run4",wendrich_WT_rep3,5000,
